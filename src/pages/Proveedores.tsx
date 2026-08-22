@@ -1,0 +1,199 @@
+// Proveedores (CRUD).
+
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import ConfirmDialog from '../components/ConfirmDialog'
+import DataTable, { type Column } from '../components/DataTable'
+import Modal from '../components/Modal'
+import { FormInput } from '../components/Form'
+import { useToast } from '../components/Toast'
+import { useAuth } from '../hooks/useAuth'
+import { useFormMutation } from '../hooks/useFormMutation'
+import { btnGhost, btnPrimary, btnSuccess } from '../components/ui'
+import {
+  createProvider,
+  deleteProvider,
+  listProviders,
+  updateProvider,
+  restoreProvider,
+} from '../services'
+import { providerSchema } from '../lib/validation'
+import type { Provider } from '../types'
+
+const columns: Column<Provider>[] = [
+  { key: 'name', header: 'Nombre' },
+  { key: 'tax_id', header: 'NIF' },
+  { key: 'phone', header: 'Teléfono' },
+  { key: 'email', header: 'Email' },
+  { key: 'is_active', header: 'Activo', render: (p) => (p.is_active ? 'Sí' : 'No') },
+]
+
+export default function Proveedores() {
+  const { can } = useAuth()
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<Provider | null>(null)
+  const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+
+  const query = useQuery({ queryKey: ['providers'], queryFn: listProviders })
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['providers'] })
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteProvider,
+    onSuccess: invalidate,
+  })
+
+  const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<Provider, Partial<Provider>>({
+    mutationFn: (payload) =>
+      editing ? updateProvider(editing.id, payload) : createProvider(payload as Provider),
+    schema: providerSchema,
+    onSuccess: () => {
+      invalidate()
+      setModalOpen(false)
+      setEditing(null)
+      toast.success(editing ? 'Proveedor actualizado correctamente' : 'Proveedor creado correctamente')
+    },
+    onConflict: (deletedId, message) => {
+      setRestoreInfo({ id: deletedId, message })
+    },
+  })
+
+  const restoreMutation = useMutation({
+    mutationFn: (id: number) => restoreProvider(id),
+    onSuccess: () => {
+      invalidate()
+      setRestoreInfo(null)
+      setModalOpen(false)
+      setEditing(null)
+      toast.success('Registro restaurado correctamente')
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    const str = (name: string) => {
+      const v = String(form.get(name) ?? '').trim()
+      return v || null
+    }
+    saveMutate({
+      name: String(form.get('name') ?? ''),
+      tax_id: str('tax_id'),
+      phone: str('phone'),
+      email: str('email'),
+      address: str('address'),
+      is_active: form.get('is_active') === 'on',
+    })
+  }
+
+  const openCreate = () => {
+    setEditing(null)
+    resetErrors()
+    setModalOpen(true)
+  }
+  const openEdit = (p: Provider) => {
+    setEditing(p)
+    resetErrors()
+    setModalOpen(true)
+  }
+
+  return (
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-800">Proveedores</h1>
+        {can('providers.create') && (
+          <button onClick={openCreate} className={btnPrimary}>
+            Nuevo proveedor
+          </button>
+        )}
+      </div>
+
+      {query.isLoading ? (
+        <p className="text-slate-500">Cargando…</p>
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={query.data ?? []}
+          rowKey={(p) => p.id}
+          onDelete={(p) => deleteMutation.mutate(p.id)}
+          onEdit={openEdit}
+          editPermission="providers.edit"
+          deletePermission="providers.delete"
+        />
+      )}
+
+      <Modal
+        open={modalOpen}
+        title={editing ? `Editar proveedor ${editing.name}` : 'Nuevo proveedor'}
+        onClose={() => {
+          setModalOpen(false)
+          setEditing(null)
+          resetErrors()
+        }}
+      >
+        <form onSubmit={handleSubmit} noValidate className="grid grid-cols-2 gap-4">
+          <FormInput
+            name="name"
+            label="Nombre"
+            required
+            defaultValue={editing?.name ?? ''}
+            error={fieldErrors.name}
+          />
+          <FormInput
+            name="tax_id"
+            label="NIF"
+            defaultValue={editing?.tax_id ?? ''}
+            error={fieldErrors.tax_id}
+          />
+          <FormInput
+            name="phone"
+            label="Teléfono"
+            defaultValue={editing?.phone ?? ''}
+            error={fieldErrors.phone}
+          />
+          <FormInput
+            name="email"
+            label="Email"
+            type="email"
+            defaultValue={editing?.email ?? ''}
+            error={fieldErrors.email}
+          />
+          <div className="col-span-2">
+            <FormInput
+              name="address"
+              label="Dirección"
+              defaultValue={editing?.address ?? ''}
+              error={fieldErrors.address}
+            />
+          </div>
+          <div className="col-span-2 flex items-center gap-2">
+            <input
+              name="is_active"
+              type="checkbox"
+              defaultChecked={editing ? editing.is_active : true}
+              className="h-4 w-4"
+            />
+            <label className="text-sm text-slate-600">Activo</label>
+          </div>
+          <div className="col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={isPending} className={btnSuccess}>
+              {isPending ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+      <ConfirmDialog
+        open={restoreInfo !== null}
+        title="Registro borrado encontrado"
+        message={restoreInfo?.message ?? ''}
+        confirmLabel="Restaurar"
+        onConfirm={() => { if (restoreInfo) restoreMutation.mutate(restoreInfo.id) }}
+        onCancel={() => setRestoreInfo(null)}
+      />
+    </div>
+  )
+}

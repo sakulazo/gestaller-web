@@ -1,0 +1,18 @@
+# Imagen de desarrollo del frontend (Vite + hot-reload)
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Instala pnpm de forma explícita (versión determinista)
+RUN npm install -g pnpm@11.18.0
+
+# Copia primero los ficheros de dependencias para aprovechar la caché de capas
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Copia el código (en dev se monta por volumen y se sobreescribe)
+COPY . .
+
+EXPOSE 5173
+
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]

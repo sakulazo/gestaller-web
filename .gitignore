@@ -1,0 +1,18 @@
+# Dependencias
+node_modules/
+
+# Builds
+dist/
+dist-ssr/
+
+# Entorno y secretos (nunca versionar)
+.env
+.env.*
+!.env.example
+
+# Logs y cachés
+*.log
+.vite/
+
+# Editor / SO
+.DS_Store

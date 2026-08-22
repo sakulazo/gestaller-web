@@ -1,0 +1,18 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Control de versiones
+.git/
+.gitignore
+
+# Logs
+*.log

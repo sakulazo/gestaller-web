@@ -1,0 +1,40 @@
+# Entorno de desarrollo del frontend (solo la SPA).
+#
+# Uso:
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# Requiere que el backend (repo gestaller-api) esté levantado: ambos composes
+# comparten la red Docker "gestaller-dev" y el proxy de Vite resuelve la API
+# por su nombre de servicio (http://api:8000). Si la API no está arriba,
+# las peticiones /api fallarán hasta que lo esté.
+#
+# Alternativa sin Docker: pnpm install && pnpm dev (proxy a http://localhost:8000).
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: gestaller-web-app
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - app_node_modules:/app/node_modules
+    environment:
+      VITE_DEV_PROXY_TARGET: http://api:8000
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - gestaller-dev
+
+volumes:
+  app_node_modules:
+
+networks:
+  gestaller-dev:
+    name: gestaller-dev
