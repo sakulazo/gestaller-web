@@ -35,6 +35,7 @@ export default function Usuarios() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<User | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
 
   const query = useQuery({ queryKey: ['users'], queryFn: listUsers })
   const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: listRoles })
@@ -129,10 +130,7 @@ export default function Usuarios() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(u) => u.id}
-          onDelete={(u) => deleteMutation.mutate(u.id)}
-          onEdit={openEdit}
-          editPermission="users.edit"
-          deletePermission="users.delete"
+          onRowClick={(u) => openEdit(u)}
         />
       )}
 
@@ -209,16 +207,33 @@ export default function Usuarios() {
             />
             <label className="text-sm text-slate-600">Activo</label>
           </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="col-span-2 flex justify-between">
+            {editing && can('users.delete') && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar el usuario "${editing?.username}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
+
       <ConfirmDialog
         open={restoreInfo !== null}
         title="Registro borrado encontrado"

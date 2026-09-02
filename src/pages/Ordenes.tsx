@@ -1,37 +1,49 @@
-// Órdenes de trabajo (creación con líneas, completar, editar estado).
+// Órdenes de trabajo (creación con líneas, acciones de ciclo de vida).
 
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import DataTable, { type Column } from '../components/DataTable'
+import ConfirmDialog from '../components/ConfirmDialog'
 import Modal from '../components/Modal'
 import { useAuth } from '../hooks/useAuth'
-import ItemsForm, { itemTotal } from '../components/ItemsForm'
 import SearchSelect from '../components/SearchSelect'
 import { btnGhost, btnPrimary, btnSuccess, inputCls, labelCls } from '../components/ui'
+import Checkbox from '../components/Checkbox'
 import { FieldError, FormTextarea } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useFormMutation } from '../hooks/useFormMutation'
+import OrdenItems from './OrdenItems'
 import {
-  completeWorkOrder,
+  cancelWorkOrder,
+  checkInWorkOrder,
   createWorkOrder,
-  deleteWorkOrder,
+  deliverWorkOrder,
+  getWorkOrder,
   listClients,
-  listProducts,
-  listServices,
-  listUsers,
   listVehicleCategories,
   listVehicles,
   listWorkOrders,
+  reactivateWorkOrder,
   updateWorkOrder,
 } from '../services'
 import { workOrderSchema } from '../lib/validation'
-import type { ItemInput, WorkOrder, WorkOrderInput, WorkOrderStatus } from '../types'
+import type { WorkOrder, WorkOrderInput, WorkOrderStatus } from '../types'
 
-const statusLabels: Record<WorkOrderStatus, string> = {
-  pendiente: 'Pendiente',
+export const statusLabels: Record<WorkOrderStatus, string> = {
+  abierta: 'Abierta',
   en_progreso: 'En progreso',
   completada: 'Completada',
+  entregada: 'Entregada',
   cancelada: 'Cancelada',
+}
+
+export const statusColors: Record<WorkOrderStatus, string> = {
+  abierta: 'bg-slate-100 text-slate-700',
+  en_progreso: 'bg-blue-100 text-blue-700',
+  completada: 'bg-emerald-100 text-emerald-700',
+  entregada: 'bg-purple-100 text-purple-700',
+  cancelada: 'bg-red-100 text-red-700',
 }
 
 function vehicleLabel(v: { plate: string; make: string; model: string | null }) {
@@ -42,42 +54,78 @@ export default function Ordenes() {
   const { can } = useAuth()
   const toast = useToast()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [modalOpen, setModalOpen] = useState(false)
+  const [itemsModalOpen, setItemsModalOpen] = useState(false)
   const [editing, setEditing] = useState<WorkOrder | null>(null)
-  const [items, setItems] = useState<ItemInput[]>([])
   const [clientId, setClientId] = useState<number | null>(null)
   const [motorVehicleId, setMotorVehicleId] = useState('')
   const [trailerVehicleId, setTrailerVehicleId] = useState('')
+  const [checkInOnCreate, setCheckInOnCreate] = useState(false)
+  const [cancelTarget, setCancelTarget] = useState<WorkOrder | null>(null)
 
   const query = useQuery({ queryKey: ['work-orders'], queryFn: listWorkOrders })
+  const editingOrderQuery = useQuery({
+    queryKey: ['work-order', editing?.id],
+    queryFn: () => getWorkOrder(editing!.id),
+    enabled: editing != null,
+  })
   const clientsQuery = useQuery({ queryKey: ['clients'], queryFn: listClients })
   const vehiclesQuery = useQuery({ queryKey: ['vehicles'], queryFn: listVehicles })
-  const servicesQuery = useQuery({ queryKey: ['services'], queryFn: listServices })
-  const productsQuery = useQuery({ queryKey: ['products'], queryFn: listProducts })
-  const usersQuery = useQuery({ queryKey: ['users'], queryFn: listUsers })
   const categoriesQuery = useQuery({ queryKey: ['vehicle-categories'], queryFn: listVehicleCategories })
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['work-orders'] })
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteWorkOrder,
-    onSuccess: invalidate,
-  })
-  const completeMutation = useMutation({
-    mutationFn: completeWorkOrder,
-    onSuccess: invalidate,
-  })
-  const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<WorkOrder, WorkOrderInput>({
-    mutationFn: (payload) =>
-      editing ? updateWorkOrder(editing.id, payload) : createWorkOrder(payload),
-    schema: workOrderSchema,
+  const checkInMutation = useMutation({
+    mutationFn: checkInWorkOrder,
     onSuccess: () => {
       invalidate()
       setModalOpen(false)
       setEditing(null)
-      setItems([])
+      toast.success('Vehículo ingresado al taller')
+    },
+  })
+  const deliverMutation = useMutation({
+    mutationFn: deliverWorkOrder,
+    onSuccess: () => {
+      invalidate()
+      setModalOpen(false)
+      setEditing(null)
+      toast.success('Vehículo entregado al cliente')
+    },
+  })
+  const cancelOrderMutation = useMutation({
+    mutationFn: cancelWorkOrder,
+    onSuccess: () => {
+      invalidate()
+      setModalOpen(false)
+      setEditing(null)
+      toast.success('Orden cancelada')
+    },
+  })
+  const reactivateMutation = useMutation({
+    mutationFn: reactivateWorkOrder,
+    onSuccess: () => {
+      invalidate()
+      setModalOpen(false)
+      setEditing(null)
+      toast.success('Orden reactivada')
+    },
+  })
+
+  const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<WorkOrder, WorkOrderInput>({
+    mutationFn: (payload) =>
+      editing ? updateWorkOrder(editing.id, payload) : createWorkOrder(payload),
+    schema: workOrderSchema,
+    onSuccess: (data) => {
+      invalidate()
+      setModalOpen(false)
+      setEditing(null)
       toast.success(editing ? 'Orden actualizada correctamente' : 'Orden creada correctamente')
+      if (!editing && checkInOnCreate) {
+        checkInWorkOrder(data.id).then(() => invalidate())
+      }
     },
   })
 
@@ -94,6 +142,12 @@ export default function Ordenes() {
     for (const c of categoriesQuery.data ?? []) m.set(c.id, c.is_self_propelled)
     return m
   }, [categoriesQuery.data])
+
+  const clientMap = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const c of clientsQuery.data ?? []) m.set(c.id, c.name)
+    return m
+  }, [clientsQuery.data])
 
   const motorVehiclesOf = useMemo(
     () => (cid: number | null) =>
@@ -112,22 +166,27 @@ export default function Ordenes() {
 
   const openCreate = () => {
     setEditing(null)
-    setItems([])
     setClientId(null)
     setMotorVehicleId('')
     setTrailerVehicleId('')
+    setCheckInOnCreate(false)
+    setItemsModalOpen(false)
     resetErrors()
     setModalOpen(true)
   }
   const openEdit = (o: WorkOrder) => {
     setEditing(o)
-    setItems(o.items.map(({ id: _id, ...rest }) => rest))
     setClientId(o.client_id)
     setMotorVehicleId(o.motor_vehicle_id ? String(o.motor_vehicle_id) : '')
     setTrailerVehicleId(o.trailer_vehicle_id ? String(o.trailer_vehicle_id) : '')
+    setItemsModalOpen(false)
     resetErrors()
     setModalOpen(true)
   }
+
+  const liveOrder = editingOrderQuery.data ?? editing
+  const liveStatus = liveOrder?.derived_status ?? ''
+  const isReadOnly = editing != null && (liveStatus === 'cancelada' || liveStatus === 'entregada')
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -137,54 +196,60 @@ export default function Ordenes() {
       motor_vehicle_id: form.get('motor_vehicle_id') ? Number(form.get('motor_vehicle_id')) : null,
       trailer_vehicle_id: form.get('trailer_vehicle_id') ? Number(form.get('trailer_vehicle_id')) : null,
       mileage: form.get('mileage') ? Number(form.get('mileage')) : null,
-      status: (form.get('status') as WorkOrderStatus) ?? 'pendiente',
-      description: String(form.get('description') ?? '').trim() || null,
+      description: String(form.get('description') ?? '').trim(),
       notes: String(form.get('notes') ?? '').trim() || null,
-      items,
     }
     saveMutate(payload)
   }
 
   const columns: Column<WorkOrder>[] = [
-    { key: 'number', header: 'Número' },
-    { key: 'client_id', header: 'Cliente ID' },
+    { key: 'number', header: 'Código' },
+    {
+      key: 'client_id',
+      header: 'Cliente',
+      render: (o) => clientMap.get(o.client_id) ?? `Cliente ${o.client_id}`,
+    },
     {
       key: 'motor_vehicle_id',
-      header: 'Vehículo a motor',
-      render: (o) => o.motor_vehicle ? vehicleLabel(o.motor_vehicle) : '—',
+      header: 'Vehículo',
+      render: (o) => o.motor_vehicle?.plate ?? '—',
     },
     {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
-      render: (o) => o.trailer_vehicle ? vehicleLabel(o.trailer_vehicle) : '—',
+      render: (o) => o.trailer_vehicle?.plate ?? '—',
     },
     {
       key: 'mileage',
-      header: 'Kilometraje',
-      render: (o) => o.mileage != null ? `${o.mileage.toLocaleString('es-ES')} km` : '—',
+      header: 'Kms',
+      render: (o) => (o.mileage != null ? `${o.mileage.toLocaleString('es-ES')} km` : '—'),
     },
     {
-      key: 'status',
+      key: 'derived_status',
       header: 'Estado',
-      render: (o) => statusLabels[o.status] ?? o.status,
+      render: (o) => (
+        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[o.derived_status] ?? 'bg-slate-100 text-slate-600'}`}>
+          {statusLabels[o.derived_status] ?? o.derived_status}
+        </span>
+      ),
     },
     { key: 'description', header: 'Descripción' },
-    {
-      key: 'total',
-      header: 'Total',
-      render: (o) => `${Number(o.total).toFixed(2)} €`,
-    },
   ]
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Órdenes de trabajo</h1>
-        {can('work_orders.create') && (
-          <button onClick={openCreate} className={btnPrimary}>
-            Nueva orden
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/work-orders/history')} className={btnGhost}>
+            Histórico
           </button>
-        )}
+          {can('work_orders.create') && (
+            <button onClick={openCreate} className={btnPrimary}>
+              Nueva orden
+            </button>
+          )}
+        </div>
       </div>
 
       {query.isLoading ? (
@@ -194,33 +259,19 @@ export default function Ordenes() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(o) => o.id}
-          onDelete={(o) => deleteMutation.mutate(o.id)}
-          onEdit={openEdit}
-          editPermission="work_orders.edit"
-          deletePermission="work_orders.delete"
-          renderActions={(o) =>
-            can('work_orders.complete') &&
-            (o.status === 'pendiente' || o.status === 'en_progreso') ? (
-              <button
-                onClick={() => completeMutation.mutate(o.id)}
-                className="mr-3 text-emerald-600 hover:text-emerald-800"
-              >
-                Completar
-              </button>
-            ) : null
-          }
+          onRowClick={(o) => openEdit(o)}
         />
       )}
 
       <Modal
         open={modalOpen}
-        title={editing ? `Editar orden ${editing.number}` : 'Nueva orden'}
+        title={editing ? `Seguimiento de orden ${editing.number}` : 'Nueva orden'}
         onClose={() => { setModalOpen(false); setEditing(null); resetErrors() }}
       >
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              {editing && clientsUnavailable ? (
+              {editing && (clientsUnavailable || isReadOnly) ? (
                 <>
                   <input type="hidden" name="client_id" value={editing.client_id} />
                   <label className={labelCls}>Cliente *</label>
@@ -265,7 +316,7 @@ export default function Ordenes() {
               )}
             </div>
             <div>
-              {editing && vehiclesUnavailable ? (
+              {editing && (vehiclesUnavailable || isReadOnly) ? (
                 <>
                   <input type="hidden" name="motor_vehicle_id" value={editing.motor_vehicle_id ?? ''} />
                   <label className={labelCls}>Vehículo a motor</label>
@@ -293,7 +344,7 @@ export default function Ordenes() {
               )}
             </div>
             <div>
-              {editing && vehiclesUnavailable ? (
+              {editing && (vehiclesUnavailable || isReadOnly) ? (
                 <>
                   <input type="hidden" name="trailer_vehicle_id" value={editing.trailer_vehicle_id ?? ''} />
                   <label className={labelCls}>Remolque</label>
@@ -316,6 +367,7 @@ export default function Ordenes() {
                     value={trailerVehicleId}
                     onChange={setTrailerVehicleId}
                   />
+                  <FieldError message={fieldErrors.trailer_vehicle_id} />
                 </>
               )}
             </div>
@@ -328,26 +380,20 @@ export default function Ordenes() {
                 defaultValue={editing?.mileage ?? ''}
                 placeholder="km"
                 required={!!motorVehicleId}
+                disabled={isReadOnly}
                 className={`${inputCls} w-full`}
               />
               <FieldError message={fieldErrors.mileage} />
-            </div>
-            <div>
-              <label className={labelCls}>Estado</label>
-              <select name="status" defaultValue={editing?.status ?? 'pendiente'} className={`${inputCls} w-full`}>
-                {Object.entries(statusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
             </div>
             <div className="col-span-2">
               <FormTextarea
                 name="description"
                 label="Descripción"
                 rows={3}
+                required
+                disabled={isReadOnly}
                 defaultValue={editing?.description ?? ''}
+                error={fieldErrors.description}
               />
             </div>
             <div className="col-span-2">
@@ -355,35 +401,115 @@ export default function Ordenes() {
                 name="notes"
                 label="Observaciones"
                 rows={3}
+                disabled={isReadOnly}
                 defaultValue={editing?.notes ?? ''}
+                error={fieldErrors.notes}
               />
             </div>
+            {!editing && (
+              <div className="col-span-2">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Checkbox
+                    checked={checkInOnCreate}
+                    onChange={(e) => setCheckInOnCreate(e.target.checked)}
+                  />
+                  Ingresar vehículo al taller
+                </div>
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className={labelCls}>Líneas de detalle</label>
-            <ItemsForm
-              items={items}
-              onChange={setItems}
-              services={servicesQuery.data}
-              products={productsQuery.data}
-              users={usersQuery.data}
-            />
-            <p className="mt-2 text-sm text-slate-600">
-              Total estimado: <strong>{itemTotal(items).toFixed(2)} €</strong>
-            </p>
-          </div>
+          {editing && (
+            <div className="flex items-center justify-between rounded border border-slate-200 px-4 py-3">
+              <div>
+                <p className="text-sm text-slate-600">
+                  <strong>{editingOrderQuery.data?.items.length ?? editing.items.length}</strong>{' '}
+                  {(editingOrderQuery.data?.items.length ?? editing.items.length) === 1 ? 'línea' : 'líneas'} · Tiempo:{' '}
+                  <strong>{editingOrderQuery.data?.total ?? editing.total} min</strong>
+                </p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Las líneas se gestionan desde su página propia.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setItemsModalOpen(true)}
+                className={btnPrimary}
+              >
+                Gestionar líneas
+              </button>
+            </div>
+          )}
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="flex justify-between">
+            {editing && (
+              <div className="flex gap-2">
+                {can('work_orders.check_in') && liveStatus === 'abierta' && (
+                  <button type="button" onClick={() => checkInMutation.mutate(editing.id)} className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
+                    Ingresar
+                  </button>
+                )}
+                {can('work_orders.deliver') && (liveStatus === 'completada' || liveStatus === 'cancelada') && (
+                  <button type="button" onClick={() => deliverMutation.mutate(editing.id)} className="rounded bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500">
+                    Entregar
+                  </button>
+                )}
+                {can('work_orders.cancel') && (liveStatus === 'abierta' || liveStatus === 'en_progreso') && (
+                  <button type="button" onClick={() => setCancelTarget(editing)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    Cancelar
+                  </button>
+                )}
+                {can('work_orders.reactivate') && liveStatus === 'cancelada' && (
+                  <button type="button" onClick={() => reactivateMutation.mutate(editing.id)} className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500">
+                    Reactivar
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              {!isReadOnly && (
+                <button type="submit" disabled={isPending} className={btnSuccess}>
+                  {isPending ? 'Guardando…' : 'Guardar'}
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </Modal>
+
+      {editing && (
+        <Modal
+          open={itemsModalOpen}
+          stacked
+          wide
+          title={`Líneas de la orden ${editing.number}`}
+          onClose={() => setItemsModalOpen(false)}
+        >
+          <OrdenItems
+            workOrderId={editing.id}
+            embedded
+            onClose={() => setItemsModalOpen(false)}
+          />
+        </Modal>
+      )}
+
+      <ConfirmDialog
+        open={cancelTarget !== null}
+        title="Cancelar orden"
+        message={<>{cancelTarget && <>¿Cancelar la orden <strong>{cancelTarget.number}</strong>? Los ítems no se modificarán.</>}</>}
+        confirmLabel="Cancelar orden"
+        danger
+        onConfirm={() => {
+          if (cancelTarget) {
+            cancelOrderMutation.mutate(cancelTarget.id)
+            setCancelTarget(null)
+          }
+        }}
+        onCancel={() => setCancelTarget(null)}
+      />
     </div>
   )
 }

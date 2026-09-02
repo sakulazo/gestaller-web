@@ -31,6 +31,7 @@ export default function Clientes() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
 
   const query = useQuery({ queryKey: ['clients'], queryFn: listClients })
 
@@ -139,10 +140,7 @@ export default function Clientes() {
           columns={columns}
           rows={rows}
           rowKey={(c) => c.id}
-          onDelete={(c) => deleteMutation.mutate(c.id)}
-          onEdit={(c) => openEdit(c)}
-          editPermission="clients.edit"
-          deletePermission="clients.delete"
+          onRowClick={(c) => openEdit(c)}
         />
       )}
 
@@ -230,16 +228,33 @@ export default function Clientes() {
               error={fieldErrors.notes}
             />
           </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 disabled:opacity-50">
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="col-span-2 flex justify-between">
+            {editing && can('clients.delete') && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 disabled:opacity-50">
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar el cliente "${editing?.name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
 
       <ConfirmDialog
         open={restoreInfo !== null}

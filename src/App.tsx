@@ -21,6 +21,8 @@ import CategoriasVehiculo from './pages/CategoriasVehiculo'
 import Servicios from './pages/Servicios'
 import CategoriasServicio from './pages/CategoriasServicio'
 import Ordenes from './pages/Ordenes'
+import OrdenItems from './pages/OrdenItems'
+import HistoricoOrdenes from './pages/HistoricoOrdenes'
 import Presupuestos from './pages/Presupuestos'
 import Facturas from './pages/Facturas'
 import Productos from './pages/Productos'
@@ -66,6 +68,8 @@ export default function App() {
                   <Route path="/services" element={<RequirePermission module="/services"><Servicios /></RequirePermission>} />
                   <Route path="/service-categories" element={<RequirePermission module="/service-categories"><CategoriasServicio /></RequirePermission>} />
                   <Route path="/work-orders" element={<RequirePermission module="/work-orders"><Ordenes /></RequirePermission>} />
+                  <Route path="/work-orders/history" element={<RequirePermission module="/work-orders"><HistoricoOrdenes /></RequirePermission>} />
+                  <Route path="/work-orders/:id/items" element={<RequirePermission module="/work-orders"><OrdenItems /></RequirePermission>} />
                   <Route path="/quotes" element={<RequirePermission module="/quotes"><Presupuestos /></RequirePermission>} />
                   <Route path="/invoices" element={<RequirePermission module="/invoices"><Facturas /></RequirePermission>} />
                   <Route path="/products" element={<RequirePermission module="/products"><Productos /></RequirePermission>} />

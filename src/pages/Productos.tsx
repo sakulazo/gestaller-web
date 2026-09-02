@@ -34,7 +34,6 @@ const columns: Column<Product>[] = [
     header: 'Precio',
     render: (r) => `${Number(r.price).toFixed(2)} €`,
   },
-  { key: 'is_active', header: 'Activo', render: (r) => (r.is_active ? 'Sí' : 'No') },
 ]
 
 export default function Productos() {
@@ -45,6 +44,7 @@ export default function Productos() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
   const [categoryId, setCategoryId] = useState('')
 
   const query = useQuery({ queryKey: ['products'], queryFn: listProducts })
@@ -101,7 +101,6 @@ export default function Productos() {
       brand: str('brand'),
       category_id: Number(form.get('category_id')),
       price: Number(form.get('price') ?? 0),
-      is_active: form.get('is_active') === 'on',
       provider_ids: form.getAll('provider_ids').map((v) => Number(v)),
     })
   }
@@ -149,10 +148,7 @@ export default function Productos() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(r) => r.id}
-          onDelete={(r) => deleteMutation.mutate(r.id)}
-          onEdit={openEdit}
-          editPermission="products.edit"
-          deletePermission="products.delete"
+          onRowClick={(r) => openEdit(r)}
         />
       )}
 
@@ -218,12 +214,6 @@ export default function Productos() {
             defaultValue={editing?.price ?? 0}
             error={fieldErrors.price}
           />
-          <div className="flex items-end gap-4 pb-1">
-            <label className="flex items-center gap-2 text-sm text-slate-600">
-              <input name="is_active" type="checkbox" defaultChecked={editing ? editing.is_active : true} className="h-4 w-4" />
-              Activo
-            </label>
-          </div>
           <div className="col-span-2">
             <label className={labelCls}>Proveedores</label>
             <div className="max-h-32 overflow-y-auto rounded border border-slate-200 p-2">
@@ -241,16 +231,33 @@ export default function Productos() {
               ))}
             </div>
           </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="col-span-2 flex justify-between">
+            {editing && can('products.delete') && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar el producto "${editing?.name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
+
       <ConfirmDialog
         open={restoreInfo !== null}
         title="Registro borrado encontrado"

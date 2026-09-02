@@ -11,6 +11,7 @@ import type {
   Invoice,
   InvoiceInput,
   InvoiceItem,
+  ItemInput,
   MonthlyBilling,
   Permission,
   PermissionCatalog,
@@ -132,14 +133,37 @@ export const deleteInventory = (id: number): Promise<void> =>
 // Órdenes de trabajo
 export const listWorkOrders = (): Promise<WorkOrder[]> =>
   api.get<WorkOrder[]>('/work-orders').then((r) => r.data)
+export const listWorkOrderHistory = (): Promise<WorkOrder[]> =>
+  api.get<WorkOrder[]>('/work-orders/history').then((r) => r.data)
+export const getWorkOrder = (id: number): Promise<WorkOrder> =>
+  api.get<WorkOrder>(`/work-orders/${id}`).then((r) => r.data)
 export const createWorkOrder = (payload: WorkOrderInput): Promise<WorkOrder> =>
   api.post<WorkOrder>('/work-orders', payload).then((r) => r.data)
 export const updateWorkOrder = (id: number, payload: Partial<WorkOrderInput>): Promise<WorkOrder> =>
   api.put<WorkOrder>(`/work-orders/${id}`, payload).then((r) => r.data)
-export const completeWorkOrder = (id: number): Promise<WorkOrder> =>
-  api.post<WorkOrder>(`/work-orders/${id}/complete`).then((r) => r.data)
+export const checkInWorkOrder = (id: number): Promise<WorkOrder> =>
+  api.post<WorkOrder>(`/work-orders/${id}/check-in`).then((r) => r.data)
+export const deliverWorkOrder = (id: number): Promise<WorkOrder> =>
+  api.post<WorkOrder>(`/work-orders/${id}/deliver`).then((r) => r.data)
+export const cancelWorkOrder = (id: number): Promise<WorkOrder> =>
+  api.post<WorkOrder>(`/work-orders/${id}/cancel`).then((r) => r.data)
+export const reactivateWorkOrder = (id: number): Promise<WorkOrder> =>
+  api.post<WorkOrder>(`/work-orders/${id}/reactivate`).then((r) => r.data)
 export const deleteWorkOrder = (id: number): Promise<void> =>
   api.delete(`/work-orders/${id}`)
+// Ítems de órdenes de trabajo
+export const getWorkOrderItems = (workOrderId: number): Promise<WorkOrderItem[]> =>
+  api.get<WorkOrderItem[]>(`/work-orders/${workOrderId}/items`).then((r) => r.data)
+export const createWorkOrderItem = (workOrderId: number, payload: ItemInput): Promise<WorkOrderItem> =>
+  api.post<WorkOrderItem>(`/work-orders/${workOrderId}/items`, payload).then((r) => r.data)
+export const updateWorkOrderItem = (workOrderId: number, id: number, payload: Partial<ItemInput>): Promise<WorkOrderItem> =>
+  api.patch<WorkOrderItem>(`/work-orders/${workOrderId}/items/${id}`, payload).then((r) => r.data)
+export const deleteWorkOrderItem = (workOrderId: number, id: number): Promise<void> =>
+  api.delete(`/work-orders/${workOrderId}/items/${id}`)
+export const completeWorkOrderItem = (workOrderId: number, id: number): Promise<WorkOrderItem> =>
+  api.post<WorkOrderItem>(`/work-orders/${workOrderId}/items/${id}/complete`).then((r) => r.data)
+export const cancelWorkOrderItem = (workOrderId: number, id: number): Promise<WorkOrderItem> =>
+  api.post<WorkOrderItem>(`/work-orders/${workOrderId}/items/${id}/cancel`).then((r) => r.data)
 
 // Presupuestos
 export const listQuotes = (): Promise<Quote[]> =>
@@ -204,8 +228,6 @@ export const fetchTableData = (table: string): Promise<Record<string, unknown>[]
   api.get<Record<string, unknown>[]>(`/data/${table}`).then((r) => r.data)
 
 // Legacy endpoints para otras partes de la app (sin deleted)
-export const listWorkOrderItems = (): Promise<WorkOrderItem[]> =>
-  api.get<WorkOrderItem[]>('/work-order-items').then((r) => r.data)
 export const listQuoteItems = (): Promise<QuoteItem[]> =>
   api.get<QuoteItem[]>('/quote-items').then((r) => r.data)
 export const listInvoiceItems = (): Promise<InvoiceItem[]> =>

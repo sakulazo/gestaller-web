@@ -48,7 +48,6 @@ export const serviceSchema = z.object({
   category_id: z.number().min(1, 'La categoria es obligatoria'),
   price: z.number().min(0, 'El precio no puede ser negativo'),
   duration_minutes: z.number().positive('La duración debe ser mayor que cero'),
-  is_active: z.boolean().default(true),
 })
 
 export type ServiceSchemaValues = z.input<typeof serviceSchema>
@@ -61,7 +60,6 @@ export const productSchema = z.object({
   brand: z.string().nullable().optional(),
   category_id: z.number().min(1, 'La categoria es obligatoria'),
   price: z.number().min(0, 'El precio no puede ser negativo').default(0),
-  is_active: z.boolean().default(true),
   provider_ids: z.array(z.number()).optional(),
 })
 
@@ -74,7 +72,6 @@ export const providerSchema = z.object({
   phone: z.string().nullable().optional(),
   email: z.string().email('El email no es valido').nullable().optional(),
   address: z.string().nullable().optional(),
-  is_active: z.boolean().default(true),
 })
 
 export type ProviderSchemaValues = z.input<typeof providerSchema>
@@ -108,7 +105,6 @@ export type UserUpdateSchemaValues = z.input<typeof userUpdateSchema>
 export const roleSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
   description: z.string().nullable().optional(),
-  is_active: z.boolean().default(true),
   permission_codes: z.array(z.string()).optional(),
 })
 
@@ -118,7 +114,6 @@ export type RoleSchemaValues = z.input<typeof roleSchema>
 export const categorySchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
   description: z.string().nullable().optional(),
-  is_active: z.boolean().default(true),
 })
 
 export type CategorySchemaValues = z.input<typeof categorySchema>
@@ -139,9 +134,8 @@ const workOrderBase = z.object({
   motor_vehicle_id: z.number().nullable().optional(),
   trailer_vehicle_id: z.number().nullable().optional(),
   mileage: z.number().nullable().optional(),
-  status: z.enum(['pendiente', 'en_progreso', 'completada', 'cancelada']).optional(),
-  description: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
+  description: z.string().trim().min(5, 'La descripción debe tener al menos 5 caracteres'),
+  notes: z.string().trim().nullable().optional(),
 })
 
 export const workOrderSchema = workOrderBase.refine(

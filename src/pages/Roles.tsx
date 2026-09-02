@@ -33,7 +33,6 @@ const columns: Column<Role>[] = [
     header: 'Permisos',
     render: (r) => r.permission_codes.length,
   },
-  { key: 'is_active', header: 'Activo', render: (r) => (r.is_active ? 'Sí' : 'No') },
 ]
 
 export default function Roles() {
@@ -43,6 +42,7 @@ export default function Roles() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Role | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const query = useQuery({ queryKey: ['roles'], queryFn: listRoles })
@@ -182,7 +182,6 @@ export default function Roles() {
     saveMutate({
       name: String(form.get('name') ?? ''),
       description: description || null,
-      is_active: form.get('is_active') === 'on',
       permission_codes: [...selected],
     })
   }
@@ -216,11 +215,7 @@ export default function Roles() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(r) => r.id}
-          onDelete={(r) => deleteMutation.mutate(r.id)}
-          onEdit={openEdit}
-          editPermission="roles.edit"
-          deletePermission="roles.delete"
-          deleteMessage={(r) => `¿Seguro que deseas eliminar el rol "${r.name}"?`}
+          onRowClick={(r) => openEdit(r)}
         />
       )}
 
@@ -242,17 +237,6 @@ export default function Roles() {
               defaultValue={editing?.name ?? ''}
               error={fieldErrors.name}
             />
-            <div>
-              <label className={labelCls}>Activo</label>
-              <div className="flex h-9 items-center">
-                <input
-                  name="is_active"
-                  type="checkbox"
-                  defaultChecked={editing ? editing.is_active : true}
-                  className="h-4 w-4"
-                />
-              </div>
-            </div>
             <div className="col-span-2">
               <FormInput
                 name="description"
@@ -325,16 +309,33 @@ export default function Roles() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="flex justify-between">
+            {editing && can('roles.delete') && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar el rol "${editing?.name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
+
       <ConfirmDialog
         open={restoreInfo !== null}
         title="Registro borrado encontrado"

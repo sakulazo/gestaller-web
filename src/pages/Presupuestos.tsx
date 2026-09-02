@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
 import { useAuth } from '../hooks/useAuth'
@@ -47,6 +48,7 @@ export default function Presupuestos() {
   const [clientId, setClientId] = useState('')
   const [motorVehicleId, setMotorVehicleId] = useState('')
   const [trailerVehicleId, setTrailerVehicleId] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(false)
 
   const query = useQuery({ queryKey: ['quotes'], queryFn: listQuotes })
   const clientsQuery = useQuery({ queryKey: ['clients'], queryFn: listClients })
@@ -64,13 +66,23 @@ export default function Presupuestos() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: QuoteStatus }) =>
       updateQuote(id, { status }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      setModalOpen(false)
+      setEditing(null)
+      setItems([])
+      toast.success('Presupuesto aprobado correctamente')
+    },
   })
   const convertMutation = useMutation({
     mutationFn: convertQuote,
     onSuccess: () => {
       invalidate()
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      setModalOpen(false)
+      setEditing(null)
+      setItems([])
+      toast.success('Presupuesto convertido en factura correctamente')
     },
   })
   const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<Quote, QuoteInput>({
@@ -200,32 +212,7 @@ export default function Presupuestos() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(p) => p.id}
-          onDelete={(p) => deleteMutation.mutate(p.id)}
-          onEdit={openEdit}
-          editPermission="quotes.edit"
-          deletePermission="quotes.delete"
-          canDelete={(p) => p.status !== 'convertido'}
-          renderActions={(p) =>
-            p.status === 'pendiente' ? (
-              can('quotes.edit') && (
-                <button
-                  onClick={() => statusMutation.mutate({ id: p.id, status: 'aprobado' })}
-                  className="mr-3 text-blue-600 hover:text-blue-800"
-                >
-                  Aprobar
-                </button>
-              )
-            ) : p.status === 'aprobado' ? (
-              can('quotes.convert') && (
-                <button
-                  onClick={() => convertMutation.mutate(p.id)}
-                  className="mr-3 text-emerald-600 hover:text-emerald-800"
-                >
-                  Convertir en factura
-                </button>
-              )
-            ) : null
-          }
+          onRowClick={(p) => openEdit(p)}
         />
       )}
 
@@ -394,16 +381,47 @@ export default function Presupuestos() {
             </p>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="flex justify-between">
+            {editing && (
+              <div className="flex gap-2">
+                {can('quotes.delete') && editing.status !== 'convertido' && (
+                  <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    Eliminar
+                  </button>
+                )}
+                {can('quotes.edit') && editing.status === 'pendiente' && (
+                  <button type="button" onClick={() => statusMutation.mutate({ id: editing.id, status: 'aprobado' })} className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
+                    Aprobar
+                  </button>
+                )}
+                {can('quotes.convert') && editing.status === 'aprobado' && (
+                  <button type="button" onClick={() => convertMutation.mutate(editing.id)} className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500">
+                    Convertir en factura
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar el presupuesto "${editing?.number}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
     </div>
   )
 }

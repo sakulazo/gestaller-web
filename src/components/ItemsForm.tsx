@@ -11,6 +11,7 @@ interface ItemsFormProps {
   services?: Service[]
   products?: Product[]
   users?: User[]
+  disabled?: boolean
 }
 
 function toNumber(value: FormDataEntryValue | null): number {
@@ -30,6 +31,7 @@ const newItem = (item_type: ItemType): ItemInput => ({
   description: '',
   quantity: 1,
   unit_price: 0,
+  duration_minutes: null,
 })
 
 export default function ItemsForm({
@@ -38,6 +40,7 @@ export default function ItemsForm({
   services,
   products,
   users,
+  disabled,
 }: ItemsFormProps) {
   const update = (index: number, patch: Partial<ItemInput>) => {
     onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)))
@@ -92,6 +95,7 @@ export default function ItemsForm({
                     <SearchSelect
                       required
                       placeholder="Selecciona servicio…"
+                      disabled={disabled}
                       options={(services ?? []).map((s) => ({
                         value: String(s.id),
                         label: s.name,
@@ -107,6 +111,7 @@ export default function ItemsForm({
                     <SearchSelect
                       required
                       placeholder="Selecciona producto…"
+                      disabled={disabled}
                       options={(products ?? []).map((p) => ({
                         value: String(p.id),
                         label: p.name,
@@ -124,6 +129,7 @@ export default function ItemsForm({
                   {item.item_type === 'service' ? (
                     <SearchSelect
                       placeholder="Sin asignar"
+                      disabled={disabled}
                       options={(users ?? []).map((u) => ({
                         value: String(u.id),
                         label: u.name,
@@ -141,6 +147,7 @@ export default function ItemsForm({
                   <input
                     type="number"
                     min={1}
+                    disabled={disabled}
                     className={`${inputCls} w-full`}
                     value={item.quantity}
                     onChange={(e) =>
@@ -154,6 +161,7 @@ export default function ItemsForm({
                       type="number"
                       min={0}
                       step="0.01"
+                      disabled={disabled}
                       className={`${inputCls} w-full pr-5`}
                       value={item.unit_price}
                       onChange={(e) => update(idx, { unit_price: toNumber(e.target.value) })}
@@ -162,9 +170,11 @@ export default function ItemsForm({
                   </div>
                 </td>
                 <td className="w-16 px-3 py-3 text-right">
-                  <button type="button" onClick={() => remove(idx)} className="text-red-600 hover:text-red-800">
-                    Quitar
-                  </button>
+                  {!disabled && (
+                    <button type="button" onClick={() => remove(idx)} className="text-red-600 hover:text-red-800">
+                      Quitar
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -173,12 +183,16 @@ export default function ItemsForm({
         </div>
       )}
       <div className="mt-2 flex gap-2">
-        <button type="button" onClick={addService} className={btnGhost}>
-          + Añadir servicio
-        </button>
-        <button type="button" onClick={addProduct} className={btnGhost}>
-          + Añadir producto
-        </button>
+        {!disabled && (
+          <>
+            <button type="button" onClick={addService} className={btnGhost}>
+              + Añadir servicio
+            </button>
+            <button type="button" onClick={addProduct} className={btnGhost}>
+              + Añadir producto
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

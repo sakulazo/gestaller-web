@@ -37,4 +37,5 @@ volumes:
 
 networks:
   gestaller-dev:
+    external: true
     name: gestaller-dev

@@ -16,7 +16,6 @@ interface CategoryRow {
   id: number
   name: string
   description: string | null
-  is_active: boolean
   is_self_propelled?: boolean
 }
 
@@ -24,7 +23,7 @@ interface CategoryManagerProps {
   title: string
   queryKey: string
   list: () => Promise<CategoryRow[]>
-  create: (payload: { name: string; description?: string | null; is_active?: boolean; is_self_propelled?: boolean }) => Promise<CategoryRow>
+  create: (payload: { name: string; description?: string | null; is_self_propelled?: boolean }) => Promise<CategoryRow>
   update: (id: number, payload: Partial<CategoryRow>) => Promise<CategoryRow>
   remove: (id: number) => Promise<void>
   createPermission: string
@@ -38,7 +37,6 @@ interface CategoryManagerProps {
 const columns: Column<CategoryRow>[] = [
   { key: 'name', header: 'Nombre' },
   { key: 'description', header: 'Descripción' },
-  { key: 'is_active', header: 'Activo', render: (c) => (c.is_active ? 'Sí' : 'No') },
 ]
 
 const selfPropelledColumn: Column<CategoryRow> = {
@@ -55,7 +53,7 @@ export default function CategoryManager({
   update,
   remove,
   createPermission,
-  editPermission,
+  editPermission: _editPermission,
   deletePermission,
   showSelfPropelled,
   restore,
@@ -67,6 +65,7 @@ export default function CategoryManager({
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<CategoryRow | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
 
   const query = useQuery({ queryKey: [queryKey], queryFn: list })
 
@@ -82,7 +81,7 @@ export default function CategoryManager({
     onSuccess: invalidate,
   })
 
-  const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<CategoryRow, { name: string; description?: string | null; is_active?: boolean; is_self_propelled?: boolean }>({
+  const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<CategoryRow, { name: string; description?: string | null; is_self_propelled?: boolean }>({
     mutationFn: (payload) =>
       editing ? update(editing.id, payload) : create(payload),
     schema: categorySchema,
@@ -115,7 +114,6 @@ export default function CategoryManager({
     saveMutate({
       name: String(form.get('name') ?? ''),
       description: description || null,
-      is_active: form.get('is_active') === 'on',
       ...(showSelfPropelled ? { is_self_propelled: form.get('is_self_propelled') === 'on' } : {}),
     })
   }
@@ -149,10 +147,7 @@ export default function CategoryManager({
           columns={showSelfPropelled ? [...columns, selfPropelledColumn] : columns}
           rows={query.data ?? []}
           rowKey={(c) => c.id}
-          onDelete={(c) => deleteMutation.mutate(c.id)}
-          onEdit={openEdit}
-          editPermission={editPermission}
-          deletePermission={deletePermission}
+          onRowClick={(c) => openEdit(c)}
         />
       )}
 
@@ -183,15 +178,6 @@ export default function CategoryManager({
               error={fieldErrors.description}
             />
           </div>
-          <div className="col-span-2 flex items-center gap-2">
-            <input
-              name="is_active"
-              type="checkbox"
-              defaultChecked={editing ? editing.is_active : true}
-              className="h-4 w-4"
-            />
-            <label className="text-sm text-slate-600">Activa</label>
-          </div>
           {showSelfPropelled && (
             <div className="col-span-2 flex items-center gap-2">
               <input
@@ -203,16 +189,33 @@ export default function CategoryManager({
               <label className="text-sm text-slate-600">Autopropulsado</label>
             </div>
           )}
-          <div className="col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="col-span-2 flex justify-between">
+            {editing && can(deletePermission) && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar la categoría "${editing?.name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
 
       <ConfirmDialog
         open={restoreInfo !== null}

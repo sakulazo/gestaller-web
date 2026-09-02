@@ -1,6 +1,7 @@
 // Tipos compartidos que reflejan los schemas del backend (API v2 en inglés).
 
-export type WorkOrderStatus = 'pendiente' | 'en_progreso' | 'completada' | 'cancelada'
+export type WorkOrderStatus = 'abierta' | 'en_progreso' | 'completada' | 'entregada' | 'cancelada'
+export type WorkOrderItemStatus = 'pendiente' | 'asignado' | 'completado' | 'cancelado' | 'producto'
 export type QuoteStatus = 'pendiente' | 'aprobado' | 'rechazado' | 'convertido'
 export type InvoiceStatus = 'emitida' | 'anulada'
 export type ItemType = 'service' | 'product'
@@ -23,7 +24,6 @@ export interface User extends Base {
 export interface Role extends Base {
   name: string
   description: string | null
-  is_active: boolean
   permission_codes: string[]
 }
 
@@ -79,14 +79,12 @@ export interface Vehicle extends Base {
 export interface VehicleCategory extends Base {
   name: string
   description: string | null
-  is_active: boolean
   is_self_propelled: boolean
 }
 
 export interface ServiceCategory extends Base {
   name: string
   description: string | null
-  is_active: boolean
 }
 
 export interface Service extends Base {
@@ -95,13 +93,11 @@ export interface Service extends Base {
   category_id: number
   price: number
   duration_minutes: number | null
-  is_active: boolean
 }
 
 export interface ProductCategory extends Base {
   name: string
   description: string | null
-  is_active: boolean
 }
 
 export interface Product extends Base {
@@ -111,7 +107,6 @@ export interface Product extends Base {
   brand: string | null
   category_id: number
   price: number
-  is_active: boolean
   provider_ids?: number[]
 }
 
@@ -121,7 +116,6 @@ export interface Provider extends Base {
   phone: string | null
   email: string | null
   address: string | null
-  is_active: boolean
 }
 
 export interface Inventory extends Base {
@@ -140,10 +134,14 @@ export interface Item {
   description: string | null
   quantity: number
   unit_price: number
+  duration_minutes: number | null
 }
 
 export interface WorkOrderItem extends Item {
   work_order_id: number
+  completed_at: string | null
+  cancelled_at: string | null
+  derived_status: WorkOrderItemStatus
 }
 
 export interface QuoteItem extends Item {
@@ -177,12 +175,15 @@ export interface WorkOrder extends Base {
   motor_vehicle_id: number | null
   trailer_vehicle_id: number | null
   mileage: number | null
-  status: WorkOrderStatus
   description: string | null
   notes: string | null
   total: number
-  date: string
+  opened_at: string | null
+  checked_in_at: string | null
   completed_at: string | null
+  delivered_at: string | null
+  cancelled_at: string | null
+  derived_status: WorkOrderStatus
   items: Item[]
   motor_vehicle: Vehicle | null
   trailer_vehicle: Vehicle | null
@@ -272,7 +273,6 @@ export interface ServiceInput {
   category_id: number
   price?: number
   duration_minutes?: number | null
-  is_active?: boolean
 }
 
 export interface ProductInput {
@@ -282,7 +282,6 @@ export interface ProductInput {
   brand?: string | null
   category_id: number
   price?: number
-  is_active?: boolean
   provider_ids?: number[]
 }
 
@@ -298,7 +297,6 @@ export interface WorkOrderInput {
   motor_vehicle_id?: number | null
   trailer_vehicle_id?: number | null
   mileage?: number | null
-  status?: WorkOrderStatus
   description?: string | null
   notes?: string | null
   items?: ItemInput[]
@@ -341,6 +339,5 @@ export interface UserInput {
 export interface RoleInput {
   name: string
   description?: string | null
-  is_active?: boolean
   permission_codes?: string[]
 }

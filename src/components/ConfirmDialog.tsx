@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
+  stacked?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -22,11 +23,12 @@ export default function ConfirmDialog({
   confirmLabel = 'Confirmar',
   cancelLabel = 'Cancelar',
   danger = false,
+  stacked,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   return (
-    <Modal open={open} title={title} onClose={onCancel}>
+    <Modal open={open} title={title} onClose={onCancel} stacked={stacked}>
       <div className="text-sm text-slate-600">{message}</div>
       <div className="mt-6 flex justify-end gap-2">
         <button type="button" onClick={onCancel} className={btnGhost}>

@@ -36,7 +36,6 @@ const columns: Column<Service>[] = [
     render: (s) => `${Number(s.price).toFixed(2)} €`,
   },
   { key: 'duration_minutes', header: 'Duración (min)' },
-  { key: 'is_active', header: 'Activo', render: (s) => (s.is_active ? 'Sí' : 'No') },
 ]
 
 export default function Servicios() {
@@ -47,6 +46,7 @@ export default function Servicios() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
   const [categoryId, setCategoryId] = useState('')
 
   const query = useQuery({ queryKey: ['services'], queryFn: listServices })
@@ -97,7 +97,6 @@ export default function Servicios() {
       category_id: Number(form.get('category_id')),
       price: Number(form.get('price') ?? 0),
       duration_minutes: Number(form.get('duration_minutes') ?? 0),
-      is_active: form.get('is_active') === 'on',
     })
   }
 
@@ -139,10 +138,7 @@ export default function Servicios() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(s) => s.id}
-          onDelete={(s) => deleteMutation.mutate(s.id)}
-          onEdit={openEdit}
-          editPermission="services.edit"
-          deletePermission="services.delete"
+          onRowClick={(s) => openEdit(s)}
         />
       )}
 
@@ -208,25 +204,33 @@ export default function Servicios() {
             defaultValue={editing?.duration_minutes ?? 1}
             error={fieldErrors.duration_minutes}
           />
-          <div className="col-span-2 flex items-center gap-2">
-            <input
-              name="is_active"
-              type="checkbox"
-              defaultChecked={editing ? editing.is_active : true}
-              className="h-4 w-4"
-            />
-            <label className="text-sm text-slate-600">Activo</label>
-          </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="col-span-2 flex justify-between">
+            {editing && can('services.delete') && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar el servicio "${editing?.name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
+
       <ConfirmDialog
         open={restoreInfo !== null}
         title="Registro borrado encontrado"

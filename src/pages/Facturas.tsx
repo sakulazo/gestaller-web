@@ -51,7 +51,12 @@ export default function Facturas() {
 
   const voidMutation = useMutation({
     mutationFn: voidInvoice,
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      setModalOpen(false)
+      setEditing(null)
+      toast.success('Factura anulada correctamente')
+    },
   })
   const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<Invoice, InvoiceInput>({
     mutationFn: (payload) =>
@@ -187,18 +192,7 @@ export default function Facturas() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(f) => f.id}
-          onEdit={openEdit}
-          editPermission="invoices.edit"
-          renderActions={(f) =>
-            can('invoices.void') && f.status === 'emitida' ? (
-              <button
-                onClick={() => voidMutation.mutate(f.id)}
-                className="mr-3 text-amber-600 hover:text-amber-800"
-              >
-                Anular
-              </button>
-            ) : null
-          }
+          onRowClick={(f) => openEdit(f)}
         />
       )}
 
@@ -349,13 +343,20 @@ export default function Facturas() {
             </p>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="flex justify-between">
+            {editing && can('invoices.void') && editing.status === 'emitida' && (
+              <button type="button" onClick={() => voidMutation.mutate(editing.id)} className="rounded border border-amber-300 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50">
+                Anular
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>

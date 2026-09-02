@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
 import { FormInput, FieldError } from '../components/Form'
@@ -33,6 +34,7 @@ export default function Inventario() {
   const queryClient = useQueryClient()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Inventory | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
   const [productId, setProductId] = useState('')
 
   const query = useQuery({ queryKey: ['inventory'], queryFn: listInventory })
@@ -99,10 +101,7 @@ export default function Inventario() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(i) => i.id}
-          onDelete={(i) => deleteMutation.mutate(i.id)}
-          onEdit={openEdit}
-          editPermission="inventory.edit"
-          deletePermission="inventory.edit"
+          onRowClick={(i) => openEdit(i)}
         />
       )}
 
@@ -167,16 +166,33 @@ export default function Inventario() {
               error={fieldErrors.location}
             />
           </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="col-span-2 flex justify-between">
+            {editing && can('inventory.edit') && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message="¿Seguro que deseas eliminar este registro de inventario? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
     </div>
   )
 }

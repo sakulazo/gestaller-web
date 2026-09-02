@@ -40,6 +40,7 @@ export default function Vehiculos() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Vehicle | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
   const [clientId, setClientId] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [search, setSearch] = useState('')
@@ -178,10 +179,7 @@ export default function Vehiculos() {
           columns={tableColumns}
           rows={rows}
           rowKey={(v) => v.id}
-          onDelete={(v) => deleteMutation.mutate(v.id)}
-          onEdit={openEdit}
-          editPermission="vehicles.edit"
-          deletePermission="vehicles.delete"
+          onRowClick={(v) => openEdit(v)}
         />
       )}
 
@@ -259,16 +257,33 @@ export default function Vehiculos() {
               error={fieldErrors.color}
             />
           </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="col-span-2 flex justify-between">
+            {editing && can('vehicles.delete') && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar el vehículo "${editing?.plate}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
+
       <ConfirmDialog
         open={restoreInfo !== null}
         title="Registro borrado encontrado"

@@ -25,7 +25,6 @@ const columns: Column<Provider>[] = [
   { key: 'tax_id', header: 'NIF' },
   { key: 'phone', header: 'Teléfono' },
   { key: 'email', header: 'Email' },
-  { key: 'is_active', header: 'Activo', render: (p) => (p.is_active ? 'Sí' : 'No') },
 ]
 
 export default function Proveedores() {
@@ -35,6 +34,7 @@ export default function Proveedores() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Provider | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
 
   const query = useQuery({ queryKey: ['providers'], queryFn: listProviders })
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['providers'] })
@@ -83,7 +83,6 @@ export default function Proveedores() {
       phone: str('phone'),
       email: str('email'),
       address: str('address'),
-      is_active: form.get('is_active') === 'on',
     })
   }
 
@@ -116,10 +115,7 @@ export default function Proveedores() {
           columns={columns}
           rows={query.data ?? []}
           rowKey={(p) => p.id}
-          onDelete={(p) => deleteMutation.mutate(p.id)}
-          onEdit={openEdit}
-          editPermission="providers.edit"
-          deletePermission="providers.delete"
+          onRowClick={(p) => openEdit(p)}
         />
       )}
 
@@ -167,25 +163,33 @@ export default function Proveedores() {
               error={fieldErrors.address}
             />
           </div>
-          <div className="col-span-2 flex items-center gap-2">
-            <input
-              name="is_active"
-              type="checkbox"
-              defaultChecked={editing ? editing.is_active : true}
-              className="h-4 w-4"
-            />
-            <label className="text-sm text-slate-600">Activo</label>
-          </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={btnSuccess}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </button>
+          <div className="col-span-2 flex justify-between">
+            {editing && can('providers.delete') && (
+              <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                Eliminar
+              </button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={btnSuccess}>
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        open={pendingDelete}
+        title="Confirmar eliminación"
+        message={`¿Seguro que deseas eliminar el proveedor "${editing?.name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
+        onCancel={() => setPendingDelete(false)}
+      />
+
       <ConfirmDialog
         open={restoreInfo !== null}
         title="Registro borrado encontrado"
