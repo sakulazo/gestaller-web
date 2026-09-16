@@ -149,15 +149,15 @@ Matriz de acciones sobre una orden en seguimiento (visibles según estado y perm
 | Reactivar | estado `cancelada` | `POST /work-orders/{id}/reactivate` | no |
 
 - En la **creación** hay un checkbox "Ingresar vehículo al taller" (`Checkbox`); si se marca, tras crear la orden se llama a `check-in`.
-- El formulario de edición queda **solo lectura** cuando el estado es `cancelada`/`entregada` (no se pueden modificar órdenes cerradas).
+- El formulario de edición queda **solo lectura** cuando la orden está facturada (`invoiced_at` presente) o cancelada.
 - Las líneas se gestionan desde la página propia (`/work-orders/:id/items`) o un modal embebido; "Tiempo" muestra `total` (minutos) suministrado por la API.
-- **Histórico** (`/work-orders/history`): lista las órdenes entregadas con resumen de ejecución y un modal de detalle (cabecera + timestamps + líneas).
+- **Histórico** (`/work-orders/history`): lista las órdenes facturadas con resumen de ejecución y un modal de detalle (cabecera + timestamps + líneas).
 
 ### 7.2 Ítems (`src/pages/OrdenItems.tsx`)
 
 Estados mostrados: `pendiente`, `asignado`, `completado`, `cancelado`, `producto` (los productos no tienen ciclo de vida).
 
-- Solo se pueden modificar líneas en órdenes `abierta`, `en_progreso` o `completada` (mismo guard que la API: en otro estado no aparecen botones y se muestra aviso).
+- Solo se pueden modificar líneas en órdenes `abierta`, `en_progreso`, `completada` o `entregada` (mismo guard que la API: en otro estado no aparecen botones y se muestra aviso). Las órdenes facturadas no permiten modificación.
 - Acciones por línea (ítem de **servicio** en `pendiente`/`asignado`):
   - **Completar** → `POST /work-orders/{id}/items/{itemId}/complete`.
   - **Cancelar** → `POST /work-orders/{id}/items/{itemId}/cancel`.
@@ -172,7 +172,7 @@ Estados mostrados: `pendiente`, `asignado`, `completado`, `cancelado`, `producto
 
 ## 8. Reglas de negocio en la UI
 
-- **Facturas**: no hay borrado. Solo la acción "Anular" (visible si estado `emitida` y permiso `invoices.void`), con confirmación → `POST /invoices/{id}/void`. (El formulario de edición de una factura anulada permanece en pantalla; es coherente con el estado mostrado desde la API.)
+- **Facturas**: no hay borrado ni anulación. Al emitir (crear) se muestra un diálogo de confirmación avisando de que la acción es irrevocable. Las facturas emitidas quedan invariables; las rectificativas se resolverán en otra iteración.
 - **Presupuestos**: un presupuesto `convertido` no muestra botón de eliminar (`canDelete` por fila en `DataTable`); sí la acción "Aprobar" y "Convertir" (→ crea factura) cuando aplica.
 - **Soft delete (datos maestros)**: el borrado es lógico (marcar `deleted_at`). Al recibir `CONFLICT` con `deleted_id` (valor único ocupado por un registro borrado) se muestra un diálogo de restauración que llama a `POST /{recurso}/{id}/restore`.
 - **Ítems de documentos**: exactamente un `service_id` o `product_id` (validación UI + validación autoritativa en la API).

@@ -9,16 +9,14 @@ import { FormInput } from '../components/Form'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../components/Toast'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import { btnGhost, btnPrimary, btnSuccess, labelCls } from '../components/ui'
-import {
-  ROLE_TEMPLATE_DEFS,
-  resolveTemplateCodes,
-} from '../permissions'
 import {
   createRole,
   deleteRole,
   listPermissions,
   listRoles,
+  listRoleTemplates,
   updateRole,
   restoreRole,
 } from '../services'
@@ -45,7 +43,12 @@ export default function Roles() {
   const [pendingDelete, setPendingDelete] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const query = useQuery({ queryKey: ['roles'], queryFn: listRoles })
+  const { items, total, page, totalPages, pageSize, setPage, isLoading } =
+    usePaginatedQuery<Role>(['roles'], listRoles)
+  const templatesQuery = useQuery({
+    queryKey: ['role-templates'],
+    queryFn: listRoleTemplates,
+  })
   const permissionsQuery = useQuery({
     queryKey: ['permissions'],
     queryFn: listPermissions,
@@ -165,14 +168,8 @@ export default function Roles() {
     })
   }
 
-  const applyTemplate = (key: string) => {
-    const next = new Set<string>()
-    for (const c of resolveTemplateCodes(key, allCodes)) {
-      if (!allCodes.includes(c)) continue
-      next.add(c)
-      depsOf(c).forEach((d) => next.add(d))
-    }
-    setSelected(next)
+  const applyTemplate = (codes: string[]) => {
+    setSelected(new Set(codes.filter((c) => allCodes.includes(c))))
   }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -208,14 +205,15 @@ export default function Roles() {
         )}
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={columns}
-          rows={query.data ?? []}
+          rows={items}
           rowKey={(r) => r.id}
           onRowClick={(r) => openEdit(r)}
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 
@@ -251,15 +249,16 @@ export default function Roles() {
             <div>
               <label className={labelCls}>Plantilla base</label>
               <div className="flex flex-wrap gap-2">
-                {ROLE_TEMPLATE_DEFS.map((t) => (
+                {(templatesQuery.data ?? []).map((t) => (
                   <button
-                    key={t.key}
+                    key={t.name}
                     type="button"
-                    onClick={() => applyTemplate(t.key)}
+                    onClick={() => applyTemplate(t.permission_codes)}
                     className={`${btnGhost} text-xs`}
-                    title={t.description}
+                    title={t.description ?? ''}
                   >
-                    {t.label}
+                    {t.name}&nbsp;
+                    <span className="text-slate-400">({t.permission_codes.length})</span>
                   </button>
                 ))}
               </div>

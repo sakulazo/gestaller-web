@@ -1,7 +1,8 @@
-// Editor de líneas de detalle (items) para órdenes, presupuestos y facturas.
-// Cada línea es un servicio o un producto (item_type obligatorio).
+// Editor de líneas de detalle (items) para presupuestos y facturas.
+// Cada línea es un servicio o un producto (item_type obligatorio),
+// con precio, cantidad y descuento (%); el subtotal de línea se calcula.
 
-import type { ItemInput, ItemType, Product, Service, User } from '../types'
+import type { ItemInput, ItemType, Product, Service, TaxRate } from '../types'
 import SearchSelect from './SearchSelect'
 import { btnGhost, inputCls } from './ui'
 
@@ -10,7 +11,8 @@ interface ItemsFormProps {
   onChange: (items: ItemInput[]) => void
   services?: Service[]
   products?: Product[]
-  users?: User[]
+  taxRates?: TaxRate[]
+  showTaxRate?: boolean
   disabled?: boolean
 }
 
@@ -19,9 +21,35 @@ function toNumber(value: FormDataEntryValue | null): number {
   return Number.isFinite(n) ? n : 0
 }
 
-export function itemTotal(items: ItemInput[]): number {
-  return items.reduce((acc, it) => acc + it.quantity * it.unit_price, 0)
+export function lineTotal(item: ItemInput): number {
+  return item.quantity * item.unit_price * (1 - item.discount / 100)
 }
+
+export function itemTotal(items: ItemInput[]): number {
+  return items.reduce((acc, it) => acc + lineTotal(it), 0)
+}
+
+export function lineTax(item: ItemInput, taxRates?: TaxRate[]): number {
+  const rate = (taxRates ?? []).find((r) => r.id === item.tax_rate_id)
+  if (!rate) return 0
+  return lineTotal(item) * (Number(rate.rate) / 100)
+}
+
+export function itemTax(items: ItemInput[], taxRates?: TaxRate[]): number {
+  return items.reduce((acc, it) => acc + lineTax(it, taxRates), 0)
+}
+
+export function itemGrandTotal(items: ItemInput[], taxRates?: TaxRate[]): number {
+  return itemTotal(items) + itemTax(items, taxRates)
+}
+
+export function getDefaultTaxRateId(taxRates?: TaxRate[]): number | null {
+  const active = (taxRates ?? []).filter((r) => r.is_active)
+  const general = active.find((r) => /general/i.test(r.name))
+  return general?.id ?? active[0]?.id ?? null
+}
+
+const clampDiscount = (n: number) => Math.min(100, Math.max(0, n))
 
 const newItem = (item_type: ItemType): ItemInput => ({
   item_type,
@@ -31,7 +59,9 @@ const newItem = (item_type: ItemType): ItemInput => ({
   description: '',
   quantity: 1,
   unit_price: 0,
+  discount: 0,
   duration_minutes: null,
+  tax_rate_id: null,
 })
 
 export default function ItemsForm({
@@ -39,17 +69,22 @@ export default function ItemsForm({
   onChange,
   services,
   products,
-  users,
+  taxRates,
+  showTaxRate,
   disabled,
 }: ItemsFormProps) {
+  const defaultTaxRateId = getDefaultTaxRateId(taxRates)
+
   const update = (index: number, patch: Partial<ItemInput>) => {
     onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)))
   }
 
   const remove = (index: number) => onChange(items.filter((_, i) => i !== index))
 
-  const addService = () => onChange([...items, newItem('service')])
-  const addProduct = () => onChange([...items, newItem('product')])
+  const addService = () =>
+    onChange([...items, { ...newItem('service'), tax_rate_id: defaultTaxRateId }])
+  const addProduct = () =>
+    onChange([...items, { ...newItem('product'), tax_rate_id: defaultTaxRateId }])
 
   const selectService = (index: number, id: number) => {
     const service = services?.find((s) => s.id === id)
@@ -57,6 +92,7 @@ export default function ItemsForm({
       service_id: id,
       description: service ? service.name : '',
       unit_price: service ? Number(service.price) : 0,
+      tax_rate_id: items[index].tax_rate_id ?? defaultTaxRateId,
     })
   }
 
@@ -66,6 +102,7 @@ export default function ItemsForm({
       product_id: id,
       description: product ? product.name : '',
       unit_price: product ? Number(product.price) : 0,
+      tax_rate_id: items[index].tax_rate_id ?? defaultTaxRateId,
     })
   }
 
@@ -73,113 +110,143 @@ export default function ItemsForm({
     <div>
       {items.length > 0 && (
         <div className="animate-fade-in overflow-visible rounded border border-slate-200">
-          <table className="min-w-full table-layout-fixed text-sm">
+          <table className="min-w-full table-fixed text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Tipo</th>
                 <th className="w-[22.5rem] px-3 py-2 text-left font-medium">Concepto</th>
-                <th className="w-64 px-3 py-2 text-left font-medium">Asignado a</th>
-                <th className="w-[120px] px-3 py-2 text-left font-medium">Cantidad</th>
                 <th className="w-[120px] px-3 py-2 text-left font-medium">Precio</th>
+                <th className="w-[120px] px-3 py-2 text-left font-medium">Cantidad</th>
+                <th className="w-[120px] px-3 py-2 text-left font-medium">Descuento</th>
+                {showTaxRate && (
+                  <th className="w-[120px] px-3 py-2 text-left font-medium">IVA</th>
+                )}
+                <th className="w-[130px] px-3 py-2 text-right font-medium">Subtotal</th>
                 <th className="w-16 px-3 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {items.map((item, idx) => (
                 <tr key={idx}>
-                <td className="px-3 py-3 text-xs font-medium text-slate-500">
-                  {item.item_type === 'service' ? 'Servicio' : 'Producto'}
-                </td>
-                <td className="w-[22.5rem] overflow-visible px-3 py-3">
-                  {item.item_type === 'service' ? (
-                    <SearchSelect
-                      required
-                      placeholder="Selecciona servicio…"
-                      disabled={disabled}
-                      options={(services ?? []).map((s) => ({
-                        value: String(s.id),
-                        label: s.name,
-                      }))}
-                      value={item.service_id?.toString() ?? ''}
-                      onChange={(v) =>
-                        v
-                          ? selectService(idx, Number(v))
-                          : update(idx, { service_id: null })
-                      }
-                    />
-                  ) : (
-                    <SearchSelect
-                      required
-                      placeholder="Selecciona producto…"
-                      disabled={disabled}
-                      options={(products ?? []).map((p) => ({
-                        value: String(p.id),
-                        label: p.name,
-                      }))}
-                      value={item.product_id?.toString() ?? ''}
-                      onChange={(v) =>
-                        v
-                          ? selectProduct(idx, Number(v))
-                          : update(idx, { product_id: null })
-                      }
-                    />
-                  )}
-                </td>
-                <td className="w-64 overflow-visible px-3 py-3">
-                  {item.item_type === 'service' ? (
-                    <SearchSelect
-                      placeholder="Sin asignar"
-                      disabled={disabled}
-                      options={(users ?? []).map((u) => ({
-                        value: String(u.id),
-                        label: u.name,
-                      }))}
-                      value={item.assigned_to?.toString() ?? ''}
-                      onChange={(v) =>
-                        update(idx, { assigned_to: v ? Number(v) : null })
-                      }
-                    />
-                  ) : (
-                    <span className="text-xs text-slate-400">—</span>
-                  )}
-                </td>
-                <td className="min-w-[120px] px-3 py-3">
-                  <input
-                    type="number"
-                    min={1}
-                    disabled={disabled}
-                    className={`${inputCls} w-full`}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      update(idx, { quantity: Math.max(1, toNumber(e.target.value)) })
-                    }
-                  />
-                </td>
-                <td className="min-w-[120px] px-3 py-3">
-                  <div className="relative w-full">
+                  <td className="px-3 py-3 text-xs font-medium text-slate-500">
+                    {item.item_type === 'service' ? 'Servicio' : 'Producto'}
+                  </td>
+                  <td className="w-[22.5rem] overflow-visible px-3 py-3">
+                    {item.item_type === 'service' ? (
+                      <SearchSelect
+                        required
+                        placeholder="Selecciona servicio…"
+                        disabled={disabled}
+                        options={(services ?? []).map((s) => ({
+                          value: String(s.id),
+                          label: s.name,
+                        }))}
+                        value={item.service_id?.toString() ?? ''}
+                        onChange={(v) =>
+                          v
+                            ? selectService(idx, Number(v))
+                            : update(idx, { service_id: null })
+                        }
+                      />
+                    ) : (
+                      <SearchSelect
+                        required
+                        placeholder="Selecciona producto…"
+                        disabled={disabled}
+                        options={(products ?? []).map((p) => ({
+                          value: String(p.id),
+                          label: p.name,
+                        }))}
+                        value={item.product_id?.toString() ?? ''}
+                        onChange={(v) =>
+                          v
+                            ? selectProduct(idx, Number(v))
+                            : update(idx, { product_id: null })
+                        }
+                      />
+                    )}
+                  </td>
+                  <td className="min-w-[120px] px-3 py-3">
+                    <div className="relative w-full">
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        disabled={disabled}
+                        className={`${inputCls} w-full pr-5`}
+                        value={item.unit_price}
+                        onChange={(e) => update(idx, { unit_price: toNumber(e.target.value) })}
+                      />
+                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">€</span>
+                    </div>
+                  </td>
+                  <td className="min-w-[120px] px-3 py-3">
                     <input
                       type="number"
-                      min={0}
-                      step="0.01"
+                      min={1}
                       disabled={disabled}
-                      className={`${inputCls} w-full pr-5`}
-                      value={item.unit_price}
-                      onChange={(e) => update(idx, { unit_price: toNumber(e.target.value) })}
+                      className={`${inputCls} w-full`}
+                      value={item.quantity}
+                      onChange={(e) =>
+                        update(idx, { quantity: Math.max(1, toNumber(e.target.value)) })
+                      }
                     />
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">€</span>
-                  </div>
-                </td>
-                <td className="w-16 px-3 py-3 text-right">
-                  {!disabled && (
-                    <button type="button" onClick={() => remove(idx)} className="text-red-600 hover:text-red-800">
-                      Quitar
-                    </button>
+                  </td>
+                  <td className="min-w-[120px] px-3 py-3">
+                    <div className="relative w-full">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        disabled={disabled}
+                        className={`${inputCls} w-full pr-5`}
+                        value={item.discount}
+                        onChange={(e) =>
+                          update(idx, { discount: clampDiscount(toNumber(e.target.value)) })
+                        }
+                      />
+                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
+                    </div>
+                  </td>
+                  {showTaxRate && (
+                    <td className="min-w-[120px] px-3 py-3">
+                      {!disabled && !taxRates?.length ? (
+                        <span className="text-xs text-slate-400">Sin tasas</span>
+                      ) : (
+                        <SearchSelect
+                          disabled={disabled}
+                          options={[
+                            { value: '', label: 'No aplica' },
+                            ...(taxRates ?? []).map((r) => ({
+                              value: String(r.id),
+                              label: `${Number(r.rate)} %`,
+                            })),
+                          ]}
+                          value={item.tax_rate_id?.toString() ?? ''}
+                          onChange={(v) =>
+                            v
+                              ? update(idx, { tax_rate_id: Number(v) })
+                              : update(idx, { tax_rate_id: null })
+                          }
+                        />
+                      )}
+                    </td>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <td className="min-w-[120px] px-3 py-3 text-right font-medium text-slate-700">
+                    {lineTotal(item).toFixed(2)} €
+                  </td>
+                  <td className="w-16 px-3 py-3 text-right">
+                    {!disabled && (
+                      <button type="button" onClick={() => remove(idx)} className="text-red-600 hover:text-red-800">
+                        Quitar
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
       <div className="mt-2 flex gap-2">

@@ -1,6 +1,6 @@
 // Catálogo de servicios (CRUD).
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -10,6 +10,7 @@ import { FieldError, FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import SearchSelect from '../components/SearchSelect'
 import { btnGhost, btnPrimary, btnSuccess, labelCls } from '../components/ui'
 import {
@@ -23,21 +24,6 @@ import {
 import { serviceSchema } from '../lib/validation'
 import type { Service, ServiceInput } from '../types'
 
-const columns: Column<Service>[] = [
-  { key: 'name', header: 'Nombre' },
-  {
-    key: 'category_id',
-    header: 'Categoría ID',
-    render: (s) => s.category_id,
-  },
-  {
-    key: 'price',
-    header: 'Precio',
-    render: (s) => `${Number(s.price).toFixed(2)} €`,
-  },
-  { key: 'duration_minutes', header: 'Duración (min)' },
-]
-
 export default function Servicios() {
   const navigate = useNavigate()
   const { can } = useAuth()
@@ -49,11 +35,36 @@ export default function Servicios() {
   const [pendingDelete, setPendingDelete] = useState(false)
   const [categoryId, setCategoryId] = useState('')
 
-  const query = useQuery({ queryKey: ['services'], queryFn: listServices })
+  const { items, total, page, totalPages, pageSize, setPage, isLoading } =
+    usePaginatedQuery<Service>(['services'], listServices)
   const categoriesQuery = useQuery({
     queryKey: ['service-categories'],
-    queryFn: listServiceCategories,
+    queryFn: () => listServiceCategories({ all: true }).then((r) => r.items),
   })
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const c of categoriesQuery.data ?? []) map.set(c.id, c.name)
+    return map
+  }, [categoriesQuery.data])
+
+  const columns: Column<Service>[] = useMemo(() => [
+    { key: 'name', header: 'Nombre' },
+    { key: 'description', header: 'Descripción' },
+    {
+      key: 'category_id',
+      header: 'Categoría',
+      align: 'center',
+      render: (s) => categoryMap.get(s.category_id) ?? String(s.category_id),
+    },
+    {
+      key: 'price',
+      header: 'Precio',
+      align: 'center',
+      render: (s) => `${Number(s.price).toFixed(2)} €`,
+    },
+    { key: 'duration_minutes', header: 'Duración (min)', align: 'center' },
+  ], [categoryMap])
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['services'] })
 
@@ -131,14 +142,15 @@ export default function Servicios() {
         </div>
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={columns}
-          rows={query.data ?? []}
+          rows={items}
           rowKey={(s) => s.id}
           onRowClick={(s) => openEdit(s)}
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 

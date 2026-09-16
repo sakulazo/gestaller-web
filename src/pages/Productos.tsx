@@ -10,6 +10,7 @@ import { FieldError, FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import SearchSelect from '../components/SearchSelect'
 import { btnGhost, btnPrimary, btnSuccess, labelCls } from '../components/ui'
 import {
@@ -19,16 +20,14 @@ import {
   listProducts,
   listProviders,
   updateProduct,
-  restoreProduct,
 } from '../services'
 import { productSchema } from '../lib/validation'
 import type { Product, ProductInput } from '../types'
 
-const columns: Column<Product>[] = [
-  { key: 'code', header: 'Código' },
+const baseColumns: Column<Product>[] = [
   { key: 'name', header: 'Nombre' },
   { key: 'brand', header: 'Marca' },
-  { key: 'category_id', header: 'Categoría ID' },
+  { key: 'category_id', header: 'Categoría' },
   {
     key: 'price',
     header: 'Precio',
@@ -38,21 +37,34 @@ const columns: Column<Product>[] = [
 
 export default function Productos() {
   const navigate = useNavigate()
-  const { can, getPermissionsForRoute } = useAuth()
+  const { can } = useAuth()
   const toast = useToast()
   const queryClient = useQueryClient()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
-  const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState(false)
   const [categoryId, setCategoryId] = useState('')
 
-  const query = useQuery({ queryKey: ['products'], queryFn: listProducts })
+  const { items, total, page, totalPages, pageSize, setPage, isLoading } =
+    usePaginatedQuery<Product>(['products'], listProducts)
   const categoriesQuery = useQuery({
     queryKey: ['product-categories'],
-    queryFn: listProductCategories,
+    queryFn: () => listProductCategories({ all: true }).then((r) => r.items),
   })
-  const providersQuery = useQuery({ queryKey: ['providers'], queryFn: listProviders })
+  const providersQuery = useQuery({
+    queryKey: ['providers'],
+    queryFn: () => listProviders({ all: true }).then((r) => r.items),
+  })
+
+  const columns = baseColumns.map((c) =>
+    c.key === 'category_id'
+      ? {
+          ...c,
+          render: (r: Product) =>
+            categoriesQuery.data?.find((cat) => cat.id === r.category_id)?.name ?? '—',
+        }
+      : c,
+  )
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['products'] })
 
@@ -71,20 +83,6 @@ export default function Productos() {
       setEditing(null)
       toast.success(editing ? 'Producto actualizado correctamente' : 'Producto creado correctamente')
     },
-    onConflict: (deletedId, message) => {
-      setRestoreInfo({ id: deletedId, message })
-    },
-  })
-
-  const restoreMutation = useMutation({
-    mutationFn: (id: number) => restoreProduct(id),
-    onSuccess: () => {
-      invalidate()
-      setRestoreInfo(null)
-      setModalOpen(false)
-      setEditing(null)
-      toast.success('Registro restaurado correctamente')
-    },
   })
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -95,7 +93,6 @@ export default function Productos() {
       return v || null
     }
     saveMutate({
-      code: String(form.get('code') ?? ''),
       name: String(form.get('name') ?? ''),
       description: str('description'),
       brand: str('brand'),
@@ -128,11 +125,6 @@ export default function Productos() {
               Gestionar categorías
             </button>
           )}
-          {getPermissionsForRoute('/inventory').some(can) && (
-            <button onClick={() => navigate('/inventory')} className={btnGhost}>
-              Gestionar inventario
-            </button>
-          )}
           {can('products.create') && (
             <button onClick={openCreate} className={btnPrimary}>
               Nuevo producto
@@ -141,14 +133,15 @@ export default function Productos() {
         </div>
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={columns}
-          rows={query.data ?? []}
+          rows={items}
           rowKey={(r) => r.id}
           onRowClick={(r) => openEdit(r)}
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 
@@ -162,13 +155,6 @@ export default function Productos() {
         }}
       >
         <form onSubmit={handleSubmit} noValidate className="grid grid-cols-2 gap-4">
-          <FormInput
-            name="code"
-            label="Código"
-            required
-            defaultValue={editing?.code ?? ''}
-            error={fieldErrors.code}
-          />
           <FormInput
             name="name"
             label="Nombre"
@@ -256,15 +242,6 @@ export default function Productos() {
         danger
         onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}
         onCancel={() => setPendingDelete(false)}
-      />
-
-      <ConfirmDialog
-        open={restoreInfo !== null}
-        title="Registro borrado encontrado"
-        message={restoreInfo?.message ?? ''}
-        confirmLabel="Restaurar"
-        onConfirm={() => { if (restoreInfo) restoreMutation.mutate(restoreInfo.id) }}
-        onCancel={() => setRestoreInfo(null)}
       />
     </div>
   )

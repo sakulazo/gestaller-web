@@ -1,16 +1,18 @@
 // Gestor genérico de categorías (servicio/producto) con CRUD.
 
 import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import ConfirmDialog from './ConfirmDialog'
 import DataTable, { type Column } from './DataTable'
 import Modal from './Modal'
 import { FormInput } from './Form'
 import { useToast } from './Toast'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import { useAuth } from '../hooks/useAuth'
 import { categorySchema } from '../lib/validation'
 import { btnGhost, btnPrimary, btnSuccess } from './ui'
+import type { ListParams, Paginated } from '../types'
 
 interface CategoryRow {
   id: number
@@ -22,7 +24,7 @@ interface CategoryRow {
 interface CategoryManagerProps {
   title: string
   queryKey: string
-  list: () => Promise<CategoryRow[]>
+  list: (params?: ListParams) => Promise<Paginated<CategoryRow>>
   create: (payload: { name: string; description?: string | null; is_self_propelled?: boolean }) => Promise<CategoryRow>
   update: (id: number, payload: Partial<CategoryRow>) => Promise<CategoryRow>
   remove: (id: number) => Promise<void>
@@ -67,7 +69,8 @@ export default function CategoryManager({
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState(false)
 
-  const query = useQuery({ queryKey: [queryKey], queryFn: list })
+  const { items, total, page, totalPages, pageSize, setPage, isLoading } =
+    usePaginatedQuery<CategoryRow>([queryKey], list)
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: [queryKey] })
@@ -140,14 +143,15 @@ export default function CategoryManager({
         )}
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={showSelfPropelled ? [...columns, selfPropelledColumn] : columns}
-          rows={query.data ?? []}
+          rows={items}
           rowKey={(c) => c.id}
           onRowClick={(c) => openEdit(c)}
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 

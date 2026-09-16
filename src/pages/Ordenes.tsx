@@ -5,9 +5,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import DataTable, { type Column } from '../components/DataTable'
 import ConfirmDialog from '../components/ConfirmDialog'
+import InvoiceFormModal from '../components/InvoiceFormModal'
 import Modal from '../components/Modal'
 import { useAuth } from '../hooks/useAuth'
 import SearchSelect from '../components/SearchSelect'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import { btnGhost, btnPrimary, btnSuccess, inputCls, labelCls } from '../components/ui'
 import Checkbox from '../components/Checkbox'
 import { FieldError, FormTextarea } from '../components/Form'
@@ -50,6 +52,13 @@ function vehicleLabel(v: { plate: string; make: string; model: string | null }) 
   return `${v.plate} — ${v.make} ${v.model ?? ''}`.trim()
 }
 
+function formatDate(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 export default function Ordenes() {
   const { can } = useAuth()
   const toast = useToast()
@@ -57,6 +66,7 @@ export default function Ordenes() {
   const navigate = useNavigate()
   const [modalOpen, setModalOpen] = useState(false)
   const [itemsModalOpen, setItemsModalOpen] = useState(false)
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
   const [editing, setEditing] = useState<WorkOrder | null>(null)
   const [clientId, setClientId] = useState<number | null>(null)
   const [motorVehicleId, setMotorVehicleId] = useState('')
@@ -64,15 +74,29 @@ export default function Ordenes() {
   const [checkInOnCreate, setCheckInOnCreate] = useState(false)
   const [cancelTarget, setCancelTarget] = useState<WorkOrder | null>(null)
 
-  const query = useQuery({ queryKey: ['work-orders'], queryFn: listWorkOrders })
+  const { items, total, page, totalPages, pageSize, setPage, isLoading } =
+    usePaginatedQuery<WorkOrder>(['work-orders'], listWorkOrders)
+  const allOrdersQuery = useQuery({
+    queryKey: ['work-orders', 'all'],
+    queryFn: () => listWorkOrders({ all: true }).then((r) => r.items),
+  })
   const editingOrderQuery = useQuery({
     queryKey: ['work-order', editing?.id],
     queryFn: () => getWorkOrder(editing!.id),
     enabled: editing != null,
   })
-  const clientsQuery = useQuery({ queryKey: ['clients'], queryFn: listClients })
-  const vehiclesQuery = useQuery({ queryKey: ['vehicles'], queryFn: listVehicles })
-  const categoriesQuery = useQuery({ queryKey: ['vehicle-categories'], queryFn: listVehicleCategories })
+  const clientsQuery = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => listClients({ all: true }).then((r) => r.items),
+  })
+  const vehiclesQuery = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: () => listVehicles({ all: true }).then((r) => r.items),
+  })
+  const categoriesQuery = useQuery({
+    queryKey: ['vehicle-categories'],
+    queryFn: () => listVehicleCategories({ all: true }).then((r) => r.items),
+  })
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['work-orders'] })
@@ -131,9 +155,7 @@ export default function Ordenes() {
 
   const vehiclesOf = useMemo(
     () => (cid: number | null) =>
-      cid == null
-        ? vehiclesQuery.data ?? []
-        : (vehiclesQuery.data ?? []).filter((v) => v.client_id === cid),
+      cid == null ? [] : (vehiclesQuery.data ?? []).filter((v) => v.client_id === cid),
     [vehiclesQuery.data],
   )
 
@@ -142,12 +164,6 @@ export default function Ordenes() {
     for (const c of categoriesQuery.data ?? []) m.set(c.id, c.is_self_propelled)
     return m
   }, [categoriesQuery.data])
-
-  const clientMap = useMemo(() => {
-    const m = new Map<number, string>()
-    for (const c of clientsQuery.data ?? []) m.set(c.id, c.name)
-    return m
-  }, [clientsQuery.data])
 
   const motorVehiclesOf = useMemo(
     () => (cid: number | null) =>
@@ -163,6 +179,23 @@ export default function Ordenes() {
 
   const clientsUnavailable = clientsQuery.isError
   const vehiclesUnavailable = vehiclesQuery.isError
+
+  const activeVehicleIds = useMemo(() => {
+    const ids = new Set<number>()
+    for (const o of allOrdersQuery.data ?? []) {
+      if (o.motor_vehicle_id != null) ids.add(o.motor_vehicle_id)
+      if (o.trailer_vehicle_id != null) ids.add(o.trailer_vehicle_id)
+    }
+    if (editing) {
+      if (editing.motor_vehicle_id != null) ids.delete(editing.motor_vehicle_id)
+      if (editing.trailer_vehicle_id != null) ids.delete(editing.trailer_vehicle_id)
+    }
+    return ids
+  }, [allOrdersQuery.data, editing])
+
+  const selectedVehicleInWorkshop =
+    (motorVehicleId && activeVehicleIds.has(Number(motorVehicleId))) ||
+    (trailerVehicleId && activeVehicleIds.has(Number(trailerVehicleId)))
 
   const openCreate = () => {
     setEditing(null)
@@ -186,7 +219,7 @@ export default function Ordenes() {
 
   const liveOrder = editingOrderQuery.data ?? editing
   const liveStatus = liveOrder?.derived_status ?? ''
-  const isReadOnly = editing != null && (liveStatus === 'cancelada' || liveStatus === 'entregada')
+  const isReadOnly = editing != null && (liveStatus === 'cancelada' || liveOrder?.invoiced_at != null)
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -203,37 +236,57 @@ export default function Ordenes() {
   }
 
   const columns: Column<WorkOrder>[] = [
-    { key: 'number', header: 'Código' },
+    { key: 'number', header: 'Código', align: 'center', render: (o) => <div className="text-center">{o.number}</div> },
     {
-      key: 'client_id',
-      header: 'Cliente',
-      render: (o) => clientMap.get(o.client_id) ?? `Cliente ${o.client_id}`,
+      key: 'opened_at',
+      header: 'Fecha',
+      align: 'center',
+      render: (o) => <div className="text-center">{formatDate(o.opened_at)}</div>,
     },
     {
       key: 'motor_vehicle_id',
       header: 'Vehículo',
-      render: (o) => o.motor_vehicle?.plate ?? '—',
+      align: 'center',
+      render: (o) => <div className="text-center">{o.motor_vehicle?.plate ?? '—'}</div>,
     },
     {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
-      render: (o) => o.trailer_vehicle?.plate ?? '—',
+      align: 'center',
+      render: (o) => <div className="text-center">{o.trailer_vehicle?.plate ?? '—'}</div>,
     },
     {
       key: 'mileage',
       header: 'Kms',
-      render: (o) => (o.mileage != null ? `${o.mileage.toLocaleString('es-ES')} km` : '—'),
+      align: 'center',
+      render: (o) => (
+        <div className="text-center">{o.mileage != null ? `${o.mileage.toLocaleString('es-ES')} km` : '—'}</div>
+      ),
     },
+    {
+      key: 'client_id',
+      header: 'Cliente',
+      align: 'center',
+      render: (o) => o.client_name ?? `Cliente ${o.client_id}`,
+    },
+    { key: 'description', header: 'Descripción' },
     {
       key: 'derived_status',
       header: 'Estado',
+      align: 'center',
       render: (o) => (
-        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[o.derived_status] ?? 'bg-slate-100 text-slate-600'}`}>
-          {statusLabels[o.derived_status] ?? o.derived_status}
-        </span>
+        <div className="flex items-center justify-center gap-1">
+          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[o.derived_status] ?? 'bg-slate-100 text-slate-600'}`}>
+            {statusLabels[o.derived_status] ?? o.derived_status}
+          </span>
+          {o.invoiced_at && (
+            <span className="inline-block whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+              Facturada
+            </span>
+          )}
+        </div>
       ),
     },
-    { key: 'description', header: 'Descripción' },
   ]
 
   return (
@@ -252,14 +305,15 @@ export default function Ordenes() {
         </div>
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={columns}
-          rows={query.data ?? []}
+          rows={items}
           rowKey={(o) => o.id}
           onRowClick={(o) => openEdit(o)}
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 
@@ -269,6 +323,11 @@ export default function Ordenes() {
         onClose={() => { setModalOpen(false); setEditing(null); resetErrors() }}
       >
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          {selectedVehicleInWorkshop && (
+            <div className="rounded border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+              El vehículo seleccionado ya está asignado a otra orden activa en el taller.
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               {editing && (clientsUnavailable || isReadOnly) ? (
@@ -332,6 +391,7 @@ export default function Ordenes() {
                   <SearchSelect
                     name="motor_vehicle_id"
                     placeholder="Sin vehículo a motor"
+                    disabled={!clientId}
                     options={motorVehiclesOf(clientId).map((v) => ({
                       value: String(v.id),
                       label: vehicleLabel(v),
@@ -360,6 +420,7 @@ export default function Ordenes() {
                   <SearchSelect
                     name="trailer_vehicle_id"
                     placeholder="Sin remolque"
+                    disabled={!clientId}
                     options={trailerVehiclesOf(clientId).map((v) => ({
                       value: String(v.id),
                       label: vehicleLabel(v),
@@ -431,13 +492,15 @@ export default function Ordenes() {
                   Las líneas se gestionan desde su página propia.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setItemsModalOpen(true)}
-                className={btnPrimary}
-              >
-                Gestionar líneas
-              </button>
+              {!isReadOnly && (
+                <button
+                  type="button"
+                  onClick={() => setItemsModalOpen(true)}
+                  className={btnPrimary}
+                >
+                  Gestionar líneas
+                </button>
+              )}
             </div>
           )}
 
@@ -446,17 +509,35 @@ export default function Ordenes() {
               <div className="flex gap-2">
                 {can('work_orders.check_in') && liveStatus === 'abierta' && (
                   <button type="button" onClick={() => checkInMutation.mutate(editing.id)} className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
-                    Ingresar
+                    Ingresar vehículo/s
+                  </button>
+                )}
+                {can('work_orders.view') && liveOrder?.checked_in_at && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(`/work-orders/${editing.id}/check-in`, '_blank')}
+                    className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    Imprimir resguardo
                   </button>
                 )}
                 {can('work_orders.deliver') && (liveStatus === 'completada' || liveStatus === 'cancelada') && (
                   <button type="button" onClick={() => deliverMutation.mutate(editing.id)} className="rounded bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500">
-                    Entregar
+                    Entregar vehículo/s
+                  </button>
+                )}
+                {can('invoices.create') && liveStatus === 'entregada' && (
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceModalOpen(true)}
+                    className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500"
+                  >
+                    Facturar
                   </button>
                 )}
                 {can('work_orders.cancel') && (liveStatus === 'abierta' || liveStatus === 'en_progreso') && (
                   <button type="button" onClick={() => setCancelTarget(editing)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                    Cancelar
+                    Cancelar orden
                   </button>
                 )}
                 {can('work_orders.reactivate') && liveStatus === 'cancelada' && (
@@ -468,7 +549,7 @@ export default function Ordenes() {
             )}
             <div className="ml-auto flex gap-2">
               <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
-                Cancelar
+                Cerrar
               </button>
               {!isReadOnly && (
                 <button type="submit" disabled={isPending} className={btnSuccess}>
@@ -495,6 +576,17 @@ export default function Ordenes() {
           />
         </Modal>
       )}
+
+      <InvoiceFormModal
+        open={invoiceModalOpen}
+        prefillWorkOrder={editing}
+        onClose={() => setInvoiceModalOpen(false)}
+        onCreated={() => {
+          setInvoiceModalOpen(false)
+          setModalOpen(false)
+          setEditing(null)
+        }}
+      />
 
       <ConfirmDialog
         open={cancelTarget !== null}

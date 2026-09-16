@@ -1,60 +1,72 @@
-// Proveedores (CRUD).
+// Tasas de impuesto (IVA).
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import Checkbox from '../components/Checkbox'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
-import { FormInput } from '../components/Form'
+import { FieldError, FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
 import { useFormMutation } from '../hooks/useFormMutation'
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import { btnGhost, btnPrimary, btnSuccess } from '../components/ui'
 import {
-  createProvider,
-  deleteProvider,
-  listProviders,
-  updateProvider,
-  restoreProvider,
+  createTaxRate,
+  deleteTaxRate,
+  listTaxRates,
+  restoreTaxRate,
+  updateTaxRate,
 } from '../services'
-import { providerSchema } from '../lib/validation'
-import type { Provider } from '../types'
+import { taxRateSchema } from '../lib/validation'
+import type { TaxRate, TaxRateInput } from '../types'
 
-const columns: Column<Provider>[] = [
-  { key: 'name', header: 'Nombre' },
-  { key: 'tax_id', header: 'NIF' },
-  { key: 'phone', header: 'Teléfono' },
-  { key: 'email', header: 'Email' },
-]
-
-export default function Proveedores() {
+export default function TaxRates() {
   const { can } = useAuth()
   const toast = useToast()
   const queryClient = useQueryClient()
   const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState<Provider | null>(null)
+  const [editing, setEditing] = useState<TaxRate | null>(null)
+  const [isActive, setIsActive] = useState(true)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState(false)
 
   const { items, total, page, totalPages, pageSize, setPage, isLoading } =
-    usePaginatedQuery<Provider>(['providers'], listProviders)
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['providers'] })
+    usePaginatedQuery<TaxRate>(['tax-rates'], listTaxRates)
+
+  const columns: Column<TaxRate>[] = useMemo(() => [
+    { key: 'name', header: 'Nombre' },
+    {
+      key: 'rate',
+      header: 'Tasa',
+      align: 'center',
+      render: (t) => `${Number(t.rate)} %`,
+    },
+    {
+      key: 'is_active',
+      header: 'Estado',
+      align: 'center',
+      render: (t) => (t.is_active ? 'Activa' : 'Inactiva'),
+    },
+  ], [])
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['tax-rates'] })
 
   const deleteMutation = useMutation({
-    mutationFn: deleteProvider,
+    mutationFn: deleteTaxRate,
     onSuccess: invalidate,
   })
 
-  const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<Provider, Partial<Provider>>({
+  const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<TaxRate, TaxRateInput>({
     mutationFn: (payload) =>
-      editing ? updateProvider(editing.id, payload) : createProvider(payload as Provider),
-    schema: providerSchema,
+      editing ? updateTaxRate(editing.id, payload) : createTaxRate(payload),
+    schema: taxRateSchema,
     onSuccess: () => {
       invalidate()
       setModalOpen(false)
       setEditing(null)
-      toast.success(editing ? 'Proveedor actualizado correctamente' : 'Proveedor creado correctamente')
+      toast.success(editing ? 'Tasa de IVA actualizada correctamente' : 'Tasa de IVA creada correctamente')
     },
     onConflict: (deletedId, message) => {
       setRestoreInfo({ id: deletedId, message })
@@ -62,39 +74,35 @@ export default function Proveedores() {
   })
 
   const restoreMutation = useMutation({
-    mutationFn: (id: number) => restoreProvider(id),
+    mutationFn: (id: number) => restoreTaxRate(id),
     onSuccess: () => {
       invalidate()
       setRestoreInfo(null)
       setModalOpen(false)
       setEditing(null)
-      toast.success('Registro restaurado correctamente')
+      toast.success('Tasa de IVA restaurada correctamente')
     },
   })
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
-    const str = (name: string) => {
-      const v = String(form.get(name) ?? '').trim()
-      return v || null
-    }
     saveMutate({
       name: String(form.get('name') ?? ''),
-      tax_id: str('tax_id'),
-      phone: str('phone'),
-      email: str('email'),
-      address: str('address'),
+      rate: Number(form.get('rate') ?? 0),
+      is_active: isActive,
     })
   }
 
   const openCreate = () => {
     setEditing(null)
+    setIsActive(true)
     resetErrors()
     setModalOpen(true)
   }
-  const openEdit = (p: Provider) => {
-    setEditing(p)
+  const openEdit = (t: TaxRate) => {
+    setEditing(t)
+    setIsActive(t.is_active)
     resetErrors()
     setModalOpen(true)
   }
@@ -102,10 +110,10 @@ export default function Proveedores() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Proveedores</h1>
-        {can('providers.create') && (
+        <h1 className="text-2xl font-bold text-slate-800">Tasas de IVA</h1>
+        {can('tax_rates.create') && (
           <button onClick={openCreate} className={btnPrimary}>
-            Nuevo proveedor
+            Nueva tasa
           </button>
         )}
       </div>
@@ -116,15 +124,15 @@ export default function Proveedores() {
         <DataTable
           columns={columns}
           rows={items}
-          rowKey={(p) => p.id}
-          onRowClick={(p) => openEdit(p)}
+          rowKey={(t) => t.id}
+          onRowClick={(t) => openEdit(t)}
           pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 
       <Modal
         open={modalOpen}
-        title={editing ? `Editar proveedor ${editing.name}` : 'Nuevo proveedor'}
+        title={editing ? `Editar tasa ${editing.name}` : 'Nueva tasa de IVA'}
         onClose={() => {
           setModalOpen(false)
           setEditing(null)
@@ -136,38 +144,30 @@ export default function Proveedores() {
             name="name"
             label="Nombre"
             required
+            maxLength={100}
             defaultValue={editing?.name ?? ''}
             error={fieldErrors.name}
           />
           <FormInput
-            name="tax_id"
-            label="NIF"
-            defaultValue={editing?.tax_id ?? ''}
-            error={fieldErrors.tax_id}
+            name="rate"
+            label="Tasa (%)"
+            type="number"
+            step="0.01"
+            min={0}
+            max={100}
+            required
+            defaultValue={editing?.rate ?? 21}
+            error={fieldErrors.rate}
           />
-          <FormInput
-            name="phone"
-            label="Teléfono"
-            defaultValue={editing?.phone ?? ''}
-            error={fieldErrors.phone}
-          />
-          <FormInput
-            name="email"
-            label="Email"
-            type="email"
-            defaultValue={editing?.email ?? ''}
-            error={fieldErrors.email}
-          />
-          <div className="col-span-2">
-            <FormInput
-              name="address"
-              label="Dirección"
-              defaultValue={editing?.address ?? ''}
-              error={fieldErrors.address}
+          <div className="col-span-2 flex items-center gap-2 text-sm text-slate-600">
+            <Checkbox
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
             />
+            Tasa activa
           </div>
           <div className="col-span-2 flex justify-between">
-            {editing && can('providers.delete') && (
+            {editing && can('tax_rates.delete') && (
               <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                 Eliminar
               </button>
@@ -181,12 +181,13 @@ export default function Proveedores() {
               </button>
             </div>
           </div>
+          <FieldError message={fieldErrors.is_active} />
         </form>
       </Modal>
       <ConfirmDialog
         open={pendingDelete}
         title="Confirmar eliminación"
-        message={`¿Seguro que deseas eliminar el proveedor "${editing?.name}"? Esta acción no se puede deshacer.`}
+        message={`¿Seguro que deseas eliminar la tasa "${editing?.name}"? Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         danger
         onConfirm={() => { if (editing) { deleteMutation.mutate(editing.id); setPendingDelete(false); setModalOpen(false); setEditing(null) } }}

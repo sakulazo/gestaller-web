@@ -21,13 +21,13 @@ const TABLES = [
   'products',
   'providers',
   'product_providers',
-  'inventory',
   'work_orders',
   'work_order_items',
   'quotes',
   'quote_items',
   'invoices',
   'invoice_items',
+  'company_profiles',
 ]
 
 function isDeleted(row: Record<string, unknown>): boolean {

@@ -12,6 +12,7 @@ import { btnGhost, btnPrimary, btnSuccess, inputCls, labelCls } from '../compone
 import { FieldError, FormTextarea } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import {
   convertQuote,
   createQuote,
@@ -50,12 +51,30 @@ export default function Presupuestos() {
   const [trailerVehicleId, setTrailerVehicleId] = useState('')
   const [pendingDelete, setPendingDelete] = useState(false)
 
-  const query = useQuery({ queryKey: ['quotes'], queryFn: listQuotes })
-  const clientsQuery = useQuery({ queryKey: ['clients'], queryFn: listClients })
-  const vehiclesQuery = useQuery({ queryKey: ['vehicles'], queryFn: listVehicles })
-  const servicesQuery = useQuery({ queryKey: ['services'], queryFn: listServices })
-  const productsQuery = useQuery({ queryKey: ['products'], queryFn: listProducts })
-  const categoriesQuery = useQuery({ queryKey: ['vehicle-categories'], queryFn: listVehicleCategories })
+  const { items: rows, total, page, totalPages, pageSize, setPage, isLoading } =
+    usePaginatedQuery<Quote>(['quotes'], listQuotes)
+  const clientsQuery = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => listClients({ all: true }).then((r) => r.items),
+  })
+  const vehiclesQuery = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: () => listVehicles({ all: true }).then((r) => r.items),
+  })
+  const servicesQuery = useQuery({
+    queryKey: ['services'],
+    queryFn: () => listServices({ all: true }).then((r) => r.items),
+    enabled: can('services.view'),
+  })
+  const productsQuery = useQuery({
+    queryKey: ['products'],
+    queryFn: () => listProducts({ all: true }).then((r) => r.items),
+    enabled: can('products.view'),
+  })
+  const categoriesQuery = useQuery({
+    queryKey: ['vehicle-categories'],
+    queryFn: () => listVehicleCategories({ all: true }).then((r) => r.items),
+  })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['quotes'] })
 
@@ -205,14 +224,15 @@ export default function Presupuestos() {
         )}
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={columns}
-          rows={query.data ?? []}
+          rows={rows}
           rowKey={(p) => p.id}
           onRowClick={(p) => openEdit(p)}
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 

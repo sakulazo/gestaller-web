@@ -1,9 +1,25 @@
 // Tipos compartidos que reflejan los schemas del backend (API v2 en inglés).
 
+// Envelope de respuestas paginadas (contrato de listados de la API).
+export interface Paginated<T> {
+  items: T[]
+  total: number
+  page: number
+  page_size: number
+}
+
+// Parámetros de listado (page_size se serializa como snake_case en el backend).
+export interface ListParams {
+  page?: number
+  pageSize?: number
+  all?: boolean
+  search?: string
+}
+
 export type WorkOrderStatus = 'abierta' | 'en_progreso' | 'completada' | 'entregada' | 'cancelada'
 export type WorkOrderItemStatus = 'pendiente' | 'asignado' | 'completado' | 'cancelado' | 'producto'
 export type QuoteStatus = 'pendiente' | 'aprobado' | 'rechazado' | 'convertido'
-export type InvoiceStatus = 'emitida' | 'anulada'
+export type InvoiceStatus = 'emitida'
 export type ItemType = 'service' | 'product'
 
 export interface Base {
@@ -66,6 +82,18 @@ export interface Client extends Base {
   notes: string | null
 }
 
+export interface CompanyProfile extends Base {
+  legal_name: string
+  tax_id: string | null
+  rii_number: string | null
+  address: string | null
+  postal_code: string | null
+  state: string | null
+  city: string | null
+  phone: string | null
+  email: string | null
+}
+
 export interface Vehicle extends Base {
   client_id: number
   category_id: number | null
@@ -101,7 +129,6 @@ export interface ProductCategory extends Base {
 }
 
 export interface Product extends Base {
-  code: string
   name: string
   description: string | null
   brand: string | null
@@ -118,11 +145,37 @@ export interface Provider extends Base {
   address: string | null
 }
 
-export interface Inventory extends Base {
-  product_id: number
-  quantity: number
-  min_quantity: number
-  location: string | null
+export interface TaxRate extends Base {
+  name: string
+  rate: number
+  is_active: boolean
+}
+
+// Parámetros de configuración del sistema (clave-valor).
+export interface SystemParameter extends Base {
+  key: string
+  value: string
+  description: string | null
+}
+
+export interface SystemParameterInput {
+  value: string
+  description?: string | null
+}
+
+// Parámetros de configuración del sistema (clave-valor).
+export interface SystemParameter {
+  id: number
+  key: string
+  value: string
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SystemParameterInput {
+  value: string
+  description?: string | null
 }
 
 export interface Item {
@@ -134,7 +187,9 @@ export interface Item {
   description: string | null
   quantity: number
   unit_price: number
+  discount: number
   duration_minutes: number | null
+  tax_rate_id: number | null
 }
 
 export interface WorkOrderItem extends Item {
@@ -184,7 +239,9 @@ export interface WorkOrder extends Base {
   delivered_at: string | null
   cancelled_at: string | null
   derived_status: WorkOrderStatus
-  items: Item[]
+  invoiced_at: string | null
+  items: WorkOrderItem[]
+  client_name: string | null
   motor_vehicle: Vehicle | null
   trailer_vehicle: Vehicle | null
 }
@@ -222,8 +279,10 @@ export interface Invoice extends Base {
   total: number
   date: string
   items: Item[]
+  client: Client
   motor_vehicle: Vehicle | null
   trailer_vehicle: Vehicle | null
+  work_order_number?: string | null
 }
 
 export interface DashboardReport {
@@ -257,6 +316,18 @@ export interface ClientInput {
   notes?: string | null
 }
 
+export interface CompanyProfileInput {
+  legal_name?: string
+  tax_id?: string | null
+  rii_number?: string | null
+  address?: string | null
+  postal_code?: string | null
+  state?: string | null
+  city?: string | null
+  phone?: string | null
+  email?: string | null
+}
+
 export interface VehicleInput {
   client_id: number
   category_id?: number | null
@@ -265,6 +336,12 @@ export interface VehicleInput {
   model?: string | null
   year?: number | null
   color?: string | null
+}
+
+export interface TaxRateInput {
+  name: string
+  rate?: number
+  is_active?: boolean
 }
 
 export interface ServiceInput {
@@ -276,20 +353,12 @@ export interface ServiceInput {
 }
 
 export interface ProductInput {
-  code: string
   name: string
   description?: string | null
   brand?: string | null
   category_id: number
   price?: number
   provider_ids?: number[]
-}
-
-export interface InventoryInput {
-  product_id: number
-  quantity?: number
-  min_quantity?: number
-  location?: string | null
 }
 
 export interface WorkOrderInput {
@@ -340,4 +409,10 @@ export interface RoleInput {
   name: string
   description?: string | null
   permission_codes?: string[]
+}
+
+export interface RoleTemplate {
+  name: string
+  description: string | null
+  permission_codes: string[]
 }

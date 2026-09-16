@@ -1,7 +1,7 @@
 // Gestión de clientes (CRUD + búsqueda).
 
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
@@ -9,6 +9,7 @@ import { FormInput, FormTextarea } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import { inputCls } from '../components/ui'
 import { createClient, deleteClient, listClients, restoreClient, updateClient } from '../services'
 import { clientSchema } from '../lib/validation'
@@ -27,13 +28,13 @@ export default function Clientes() {
   const { can } = useAuth()
   const toast = useToast()
   const queryClient = useQueryClient()
-  const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState(false)
 
-  const query = useQuery({ queryKey: ['clients'], queryFn: listClients })
+  const { items, total, page, totalPages, pageSize, setPage, search, setSearch, isLoading } =
+    usePaginatedQuery<Client>(['clients'], listClients)
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['clients'] })
 
@@ -67,20 +68,6 @@ export default function Clientes() {
       toast.success('Registro restaurado correctamente')
     },
   })
-
-  const rows = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    if (!term) return query.data ?? []
-    return (query.data ?? []).filter(
-      (c) =>
-        c.name.toLowerCase().includes(term) ||
-        c.tax_id.toLowerCase().includes(term) ||
-        (c.email ?? '').toLowerCase().includes(term) ||
-        c.city.toLowerCase().includes(term) ||
-        c.state.toLowerCase().includes(term) ||
-        (c.notes ?? '').toLowerCase().includes(term),
-    )
-  }, [query.data, search])
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -133,14 +120,15 @@ export default function Clientes() {
         className={`${inputCls} mb-4 w-full max-w-sm`}
       />
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={columns}
-          rows={rows}
+          rows={items}
           rowKey={(c) => c.id}
           onRowClick={(c) => openEdit(c)}
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 

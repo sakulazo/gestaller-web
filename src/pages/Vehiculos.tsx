@@ -1,6 +1,6 @@
 // Gestión de vehículos (CRUD).
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -10,6 +10,7 @@ import { FieldError, FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import SearchSelect from '../components/SearchSelect'
 import { btnGhost, btnPrimary, btnSuccess, inputCls, labelCls } from '../components/ui'
 import {
@@ -25,11 +26,10 @@ import { vehicleSchema } from '../lib/validation'
 import type { Vehicle, VehicleInput } from '../types'
 
 const columns: Column<Vehicle>[] = [
-  { key: 'plate', header: 'Matrícula' },
+  { key: 'plate', header: 'Matrícula', render: (v) => <div className="text-center">{v.plate}</div> },
   { key: 'make', header: 'Marca' },
   { key: 'model', header: 'Modelo' },
-  { key: 'year', header: 'Año' },
-  { key: 'color', header: 'Color' },
+  { key: 'year', header: 'Año', render: (v) => <div className="text-center">{v.year ?? ''}</div> },
 ]
 
 export default function Vehiculos() {
@@ -43,11 +43,17 @@ export default function Vehiculos() {
   const [pendingDelete, setPendingDelete] = useState(false)
   const [clientId, setClientId] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [search, setSearch] = useState('')
 
-  const query = useQuery({ queryKey: ['vehicles'], queryFn: listVehicles })
-  const clientsQuery = useQuery({ queryKey: ['clients'], queryFn: listClients })
-  const categoriesQuery = useQuery({ queryKey: ['vehicle-categories'], queryFn: listVehicleCategories })
+  const { items, total, page, totalPages, pageSize, setPage, search, setSearch, isLoading } =
+    usePaginatedQuery<Vehicle>(['vehicles'], listVehicles)
+  const clientsQuery = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => listClients({ all: true }).then((r) => r.items),
+  })
+  const categoriesQuery = useQuery({
+    queryKey: ['vehicle-categories'],
+    queryFn: () => listVehicleCategories({ all: true }).then((r) => r.items),
+  })
 
   const clientName = (id: number) =>
     clientsQuery.data?.find((c) => c.id === id)?.name ?? '—'
@@ -55,30 +61,11 @@ export default function Vehiculos() {
   const categoryName = (id: number | null) =>
     categoriesQuery.data?.find((c) => c.id === id)?.name ?? '—'
 
-  const rows = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    if (!term) return query.data ?? []
-    return (query.data ?? []).filter(
-      (v) =>
-        v.plate.toLowerCase().includes(term) ||
-        v.make.toLowerCase().includes(term) ||
-        (v.model ?? '').toLowerCase().includes(term) ||
-        clientName(v.client_id).toLowerCase().includes(term),
-    )
-  }, [query.data, search, clientsQuery.data])
-
   const tableColumns: Column<Vehicle>[] = [
     ...columns,
     { key: 'client_id', header: 'Propietario', render: (v) => clientName(v.client_id) },
     { key: 'category_id', header: 'Categoría', render: (v) => categoryName(v.category_id) },
-    {
-      key: 'is_self_propelled',
-      header: 'Autopropulsado',
-      render: (v) => {
-        const cat = categoriesQuery.data?.find((c) => c.id === v.category_id)
-        return cat ? (cat.is_self_propelled ? 'Sí' : 'No') : '—'
-      },
-    },
+
   ]
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['vehicles'] })
@@ -172,14 +159,16 @@ export default function Vehiculos() {
         className={`${inputCls} mb-4 w-full max-w-sm`}
       />
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={tableColumns}
-          rows={rows}
+          rows={items}
           rowKey={(v) => v.id}
           onRowClick={(v) => openEdit(v)}
+          headerAlign="center"
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 

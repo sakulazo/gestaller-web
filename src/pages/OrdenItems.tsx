@@ -19,7 +19,6 @@ import {
   deleteWorkOrderItem,
   getWorkOrder,
   getWorkOrderItems,
-  listClients,
   listProducts,
   listServices,
   listUsers,
@@ -65,7 +64,9 @@ const newItem = (item_type: ItemType): ItemInput => ({
   description: '',
   quantity: 1,
   unit_price: 0,
+  discount: 0,
   duration_minutes: null,
+  tax_rate_id: null,
 })
 
 const toInput = (it: WorkOrderItem): ItemInput => ({
@@ -76,7 +77,9 @@ const toInput = (it: WorkOrderItem): ItemInput => ({
   description: it.description ?? '',
   quantity: it.quantity,
   unit_price: it.unit_price,
+  discount: it.discount,
   duration_minutes: it.duration_minutes,
+  tax_rate_id: null,
 })
 
 interface ItemRowEditorProps {
@@ -125,10 +128,10 @@ function ItemRowEditor({
 
   return (
     <tr className="h-16 bg-slate-50">
-      <td className="px-3 py-3 text-xs font-medium text-slate-500">
+      <td className="w-[4.5rem] px-2 py-3 text-center text-xs font-medium text-slate-500">
         {isService ? 'Servicio' : 'Producto'}
       </td>
-      <td className="overflow-visible px-3 py-3">
+      <td className="w-[17rem] overflow-visible px-3 py-3">
         {pickReference ? (
           <SearchSelect
             required
@@ -149,7 +152,7 @@ function ItemRowEditor({
           />
         )}
       </td>
-      <td className="overflow-visible px-3 py-3">
+      <td className="w-40 overflow-visible px-3 py-3 text-center">
         {isService ? (
           <SearchSelect
             placeholder="Sin asignar"
@@ -164,7 +167,7 @@ function ItemRowEditor({
           <span className="text-xs text-slate-400">—</span>
         )}
       </td>
-      <td className="px-3 py-3">
+      <td className="w-20 px-3 py-3 text-center">
         <input
           type="number"
           min={1}
@@ -173,19 +176,23 @@ function ItemRowEditor({
           onChange={(e) => onChange({ quantity: Math.max(1, toNumber(e.target.value)) })}
         />
       </td>
-      <td className="px-3 py-3">
-        <input
-          type="number"
-          min={0}
-          className={`${inputCls} w-full`}
-          value={item.duration_minutes ?? ''}
-          placeholder="min"
-          onChange={(e) => onChange({ duration_minutes: e.target.value ? Math.max(0, toNumber(e.target.value)) : null })}
-        />
+      <td className="w-24 px-3 py-3 text-center">
+        {isService ? (
+          <input
+            type="number"
+            min={0}
+            className={`${inputCls} w-full`}
+            value={item.duration_minutes ?? ''}
+            placeholder="min"
+            onChange={(e) => onChange({ duration_minutes: e.target.value ? Math.max(0, toNumber(e.target.value)) : null })}
+          />
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        )}
       </td>
-      <td className="px-3 py-3 text-xs text-slate-400">—</td>
-      <td className="px-3 py-3">
-        <div className="flex gap-2">
+      <td className="w-28 px-3 py-3 text-center text-xs text-slate-400">—</td>
+      <td className="w-[13rem] px-3 py-3">
+        <div className="flex justify-center gap-2">
           <button
             type="button"
             onClick={onSave}
@@ -240,20 +247,30 @@ export default function OrdenItems({
     queryFn: () => getWorkOrderItems(id),
     enabled: Number.isInteger(id),
   })
-  const clientsQuery = useQuery({ queryKey: ['clients'], queryFn: listClients })
-  const servicesQuery = useQuery({ queryKey: ['services'], queryFn: listServices })
-  const productsQuery = useQuery({ queryKey: ['products'], queryFn: listProducts })
-  const usersQuery = useQuery({ queryKey: ['users'], queryFn: listUsers })
+  const servicesQuery = useQuery({
+    queryKey: ['services'],
+    queryFn: () => listServices({ all: true }).then((r) => r.items),
+    enabled: can('services.view'),
+  })
+  const productsQuery = useQuery({
+    queryKey: ['products'],
+    queryFn: () => listProducts({ all: true }).then((r) => r.items),
+    enabled: can('products.view'),
+  })
+  const usersQuery = useQuery({
+    queryKey: ['users'],
+    queryFn: () => listUsers({ all: true }).then((r) => r.items),
+    enabled: can('users.view'),
+  })
 
   const order = orderQuery.data
   const items = itemsQuery.data ?? []
-  const canModify = order?.derived_status === 'abierta' || order?.derived_status === 'en_progreso' || order?.derived_status === 'completada'
-
-  const clientMap = useMemo(() => {
-    const m = new Map<number, string>()
-    for (const c of clientsQuery.data ?? []) m.set(c.id, c.name)
-    return m
-  }, [clientsQuery.data])
+  const canModify =
+    order?.invoiced_at == null &&
+    (order?.derived_status === 'abierta' ||
+      order?.derived_status === 'en_progreso' ||
+      order?.derived_status === 'completada' ||
+      order?.derived_status === 'entregada')
 
   const userName = useMemo(() => {
     const m = new Map<number, string>()
@@ -365,7 +382,7 @@ export default function OrdenItems({
             </h1>
           )}
           <p className={`text-sm text-slate-500 ${embedded ? '' : 'mt-1'}`}>
-            {clientMap.get(order.client_id) ?? `Cliente ${order.client_id}`}
+            {order.client_name ?? `Cliente ${order.client_id}`}
             {' · '}
             {order.motor_vehicle?.plate ?? '—'}
             {order.trailer_vehicle ? ` / ${order.trailer_vehicle.plate}` : ''}
@@ -383,29 +400,33 @@ export default function OrdenItems({
           <p className="text-sm text-slate-600">
             Tiempo total: <strong>{total} min</strong>
           </p>
-          <button type="button" onClick={close} className={btnGhost}>
-            {embedded ? 'Cerrar' : 'Volver a órdenes'}
-          </button>
+          {!embedded && (
+            <button type="button" onClick={close} className={btnGhost}>
+              Volver a órdenes
+            </button>
+          )}
         </div>
       </div>
 
       {!canModify && (
         <p className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
-          Solo se pueden modificar líneas en órdenes abiertas, en progreso o completadas.
+          {order.invoiced_at
+            ? 'Esta orden está facturada: sus líneas no se pueden modificar.'
+            : 'Solo se pueden modificar líneas en órdenes abiertas, en progreso o completadas.'}
         </p>
       )}
 
       <div className="overflow-visible rounded bg-white shadow">
-        <table className="min-w-full text-sm">
+        <table className="min-w-full table-fixed text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="px-3 py-2 text-left font-medium">Tipo</th>
-              <th className="w-[22.5rem] px-3 py-2 text-left font-medium">Concepto</th>
-              <th className="w-48 px-3 py-2 text-left font-medium">Asignado a</th>
-              <th className="w-20 px-3 py-2 text-left font-medium">Cant.</th>
-              <th className="w-24 px-3 py-2 text-left font-medium">Tiempo (min)</th>
-              <th className="px-3 py-2 text-left font-medium">Estado</th>
-              <th className="px-3 py-2" />
+              <th className="w-[4.5rem] px-4 py-2 text-center font-medium uppercase">Tipo</th>
+              <th className="w-[17rem] px-4 py-2 text-center font-medium uppercase">Concepto</th>
+              <th className="w-40 px-4 py-2 text-center font-medium uppercase">Asignado</th>
+              <th className="w-20 px-4 py-2 text-center font-medium uppercase">Cant.</th>
+              <th className="w-24 px-4 py-2 text-center font-medium uppercase">Tiempo</th>
+              <th className="w-28 px-4 py-2 text-center font-medium uppercase">Estado</th>
+              <th className="w-[13rem] px-4 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -428,46 +449,46 @@ export default function OrdenItems({
                 />
               ) : (
                 <tr key={it.id} className="h-16">
-                  <td className="px-3 py-3 text-xs font-medium text-slate-500">
+                  <td className="w-[4.5rem] px-2 py-3 text-center text-xs font-medium text-slate-500">
                     {it.item_type === 'service' ? 'Servicio' : 'Producto'}
                   </td>
-                  <td className="px-3 py-3">{it.description || '—'}</td>
-                  <td className="px-3 py-3">{userName(it.assigned_to)}</td>
-                  <td className="px-3 py-3">{it.quantity}</td>
-                  <td className="px-3 py-3">{it.duration_minutes != null ? `${it.duration_minutes} min` : '—'}</td>
-                  <td className="px-3 py-3">
+                  <td className="w-[17rem] px-3 py-3">{it.description || '—'}</td>
+                  <td className="w-40 px-3 py-3 text-center">{userName(it.assigned_to)}</td>
+                  <td className="w-20 px-3 py-3 text-center">{it.quantity}</td>
+                  <td className="w-24 px-3 py-3 text-center">{it.duration_minutes != null ? `${it.duration_minutes} min` : '—'}</td>
+                  <td className="w-28 px-3 py-3 text-center">
                     <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
                         itemStatusColors[it.derived_status] ?? 'bg-slate-100 text-slate-600'
                       }`}
                     >
                       {itemStatusLabels[it.derived_status] ?? it.derived_status}
                     </span>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="w-[13rem] px-3 py-3">
                     {canModify && (
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-center gap-1">
                         {canEditDoc && (
-                          <button type="button" onClick={() => startEdit(it)} className="text-xs text-blue-600 hover:text-blue-800">
+                          <button type="button" onClick={() => startEdit(it)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50">
                             Editar
                           </button>
                         )}
                         {canDelete && (
-                          <button type="button" onClick={() => setDeleteTarget(it)} className="text-xs text-red-600 hover:text-red-800">
+                          <button type="button" onClick={() => setDeleteTarget(it)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50">
                             Quitar
                           </button>
                         )}
                         {it.item_type === 'service' &&
                           (it.derived_status === 'pendiente' || it.derived_status === 'asignado') &&
                           canComplete && (
-                            <button type="button" onClick={() => completeMutation.mutate(it.id)} className="text-xs text-emerald-600 hover:text-emerald-800">
+                            <button type="button" onClick={() => completeMutation.mutate(it.id)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-emerald-600 hover:bg-emerald-50">
                               Completar
                             </button>
                           )}
                         {it.item_type === 'service' &&
                           (it.derived_status === 'pendiente' || it.derived_status === 'asignado') &&
                           canCancel && (
-                            <button type="button" onClick={() => cancelMutation.mutate(it.id)} className="text-xs text-orange-600 hover:text-orange-800">
+                            <button type="button" onClick={() => cancelMutation.mutate(it.id)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-orange-600 hover:bg-orange-50">
                               Cancelar
                             </button>
                           )}
@@ -510,6 +531,14 @@ export default function OrdenItems({
           </button>
           <button type="button" onClick={() => setAdding(newItem('product'))} className={btnGhost}>
             + Añadir producto
+          </button>
+        </div>
+      )}
+
+      {embedded && (
+        <div className="mt-4 flex justify-end">
+          <button type="button" onClick={close} className={btnGhost}>
+            Cerrar
           </button>
         </div>
       )}

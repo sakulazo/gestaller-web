@@ -21,6 +21,21 @@ export const clientSchema = z.object({
 
 export type ClientSchemaValues = z.input<typeof clientSchema>
 
+// ---------- Perfil del taller ----------
+export const companyProfileSchema = z.object({
+  legal_name: z.string().min(1, 'El nombre del taller es obligatorio'),
+  tax_id: z.string().nullable().optional(),
+  rii_number: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  email: z.string().email('El email no es valido').nullable().optional(),
+  address: z.string().nullable().optional(),
+  postal_code: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+})
+
+export type CompanyProfileSchemaValues = z.input<typeof companyProfileSchema>
+
 // ---------- Vehiculos ----------
 export const vehicleSchema = z.object({
   client_id: z.number().min(1, 'El cliente es obligatorio'),
@@ -54,7 +69,6 @@ export type ServiceSchemaValues = z.input<typeof serviceSchema>
 
 // ---------- Productos ----------
 export const productSchema = z.object({
-  code: z.string().min(1, 'El codigo es obligatorio'),
   name: z.string().min(1, 'El nombre es obligatorio'),
   description: z.string().nullable().optional(),
   brand: z.string().nullable().optional(),
@@ -75,6 +89,18 @@ export const providerSchema = z.object({
 })
 
 export type ProviderSchemaValues = z.input<typeof providerSchema>
+
+// ---------- Tasas de impuesto (IVA) ----------
+export const taxRateSchema = z.object({
+  name: z.string().min(1, 'El nombre es obligatorio'),
+  rate: z
+    .number({ error: 'La tasa es obligatoria' })
+    .min(0, 'La tasa no puede ser negativa')
+    .max(100, 'La tasa no puede superar 100'),
+  is_active: z.boolean().default(true),
+})
+
+export type TaxRateSchemaValues = z.input<typeof taxRateSchema>
 
 // ---------- Usuarios ----------
 export const userCreateSchema = z.object({
@@ -117,16 +143,6 @@ export const categorySchema = z.object({
 })
 
 export type CategorySchemaValues = z.input<typeof categorySchema>
-
-// ---------- Inventario ----------
-export const inventorySchema = z.object({
-  product_id: z.number().min(1, 'El producto es obligatorio'),
-  quantity: z.number().min(0, 'La cantidad no puede ser negativa').default(0),
-  min_quantity: z.number().min(0).default(0),
-  location: z.string().nullable().optional(),
-})
-
-export type InventorySchemaValues = z.input<typeof inventorySchema>
 
 // ---------- Ordenes de trabajo ----------
 const workOrderBase = z.object({
@@ -174,7 +190,13 @@ export const invoiceSchema = z.object({
   mileage: z.number().nullable().optional(),
   work_order_id: z.number().nullable().optional(),
   quote_id: z.number().nullable().optional(),
-  status: z.enum(['emitida', 'anulada']).optional(),
+  status: z.enum(['emitida']).optional(),
   notes: z.string().nullable().optional(),
   taxes: z.number().min(0, 'Los impuestos no pueden ser negativos').optional(),
+})
+
+// ---------- Parámetros de configuración ----------
+export const systemParameterSchema = z.object({
+  value: z.string().min(1, 'El valor es obligatorio'),
+  description: z.string().nullable().optional(),
 })

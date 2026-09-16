@@ -23,16 +23,20 @@ import CategoriasServicio from './pages/CategoriasServicio'
 import Ordenes from './pages/Ordenes'
 import OrdenItems from './pages/OrdenItems'
 import HistoricoOrdenes from './pages/HistoricoOrdenes'
+import CheckInPrint from './pages/CheckInPrint'
 import Presupuestos from './pages/Presupuestos'
 import Facturas from './pages/Facturas'
+import InvoicePrint from './pages/InvoicePrint'
 import Productos from './pages/Productos'
 import CategoriasProducto from './pages/CategoriasProducto'
 import Proveedores from './pages/Proveedores'
-import Inventario from './pages/Inventario'
 import Usuarios from './pages/Usuarios'
 import Roles from './pages/Roles'
 import Reportes from './pages/Reportes'
 import Datos from './pages/Datos'
+import PerfilTaller from './pages/PerfilTaller'
+import TaxRates from './pages/TaxRates'
+import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 
 // Los errores de las queries (listados) se notifican de forma global:
@@ -40,7 +44,12 @@ import NotFound from './pages/NotFound'
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
-      emitToast('error', toApplicationError(error).message)
+      const appErr = toApplicationError(error)
+      // Un 403 (FORBIDDEN) no es un fallo operativo: la UI ya controla el acceso
+      // con `can()`/RequirePermission. Silenciarlo evita toasts espurios cuando
+      // una consulta de apoyo no es visible para el usuario.
+      if (appErr.code === 'FORBIDDEN') return
+      emitToast('error', appErr.message)
     },
   }),
 })
@@ -75,10 +84,12 @@ export default function App() {
                   <Route path="/products" element={<RequirePermission module="/products"><Productos /></RequirePermission>} />
                   <Route path="/product-categories" element={<RequirePermission module="/product-categories"><CategoriasProducto /></RequirePermission>} />
                   <Route path="/providers" element={<RequirePermission module="/providers"><Proveedores /></RequirePermission>} />
-                  <Route path="/inventory" element={<RequirePermission module="/inventory"><Inventario /></RequirePermission>} />
                   <Route path="/users" element={<RequirePermission module="/users"><Usuarios /></RequirePermission>} />
                   <Route path="/roles" element={<RequirePermission module="/roles"><Roles /></RequirePermission>} />
                   <Route path="/reports" element={<RequirePermission module="/reports"><Reportes /></RequirePermission>} />
+                  <Route path="/company-profile" element={<RequirePermission module="/company-profile"><PerfilTaller /></RequirePermission>} />
+                  <Route path="/tax-rates" element={<RequirePermission module="/tax-rates"><TaxRates /></RequirePermission>} />
+                  <Route path="/settings" element={<RequirePermission module="/settings"><Settings /></RequirePermission>} />
                   <Route path="/data" element={<RequirePermission module="/data"><Datos /></RequirePermission>} />
                   <Route path="/clientes" element={<Navigate to="/clients" replace />} />
                   <Route path="/vehiculos" element={<Navigate to="/vehicles" replace />} />
@@ -91,11 +102,30 @@ export default function App() {
                   <Route path="/recambios" element={<Navigate to="/products" replace />} />
                   <Route path="/categorias-producto" element={<Navigate to="/product-categories" replace />} />
                   <Route path="/proveedores" element={<Navigate to="/providers" replace />} />
-                  <Route path="/inventario" element={<Navigate to="/inventory" replace />} />
                   <Route path="/usuarios" element={<Navigate to="/users" replace />} />
                   <Route path="/reportes" element={<Navigate to="/reports" replace />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
+                <Route
+                  path="/work-orders/:id/check-in"
+                  element={
+                    <ProtectedRoute>
+                      <RequirePermission module="/work-orders">
+                        <CheckInPrint />
+                      </RequirePermission>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/:id/print"
+                  element={
+                    <ProtectedRoute>
+                      <RequirePermission module="/invoices">
+                        <InvoicePrint />
+                      </RequirePermission>
+                    </ProtectedRoute>
+                  }
+                />
               </Routes>
             </AuthProvider>
           </BrowserRouter>

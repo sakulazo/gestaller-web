@@ -1,6 +1,6 @@
 # Gestaller — Frontend
 
-SPA de la aplicación de gestión de lavaderos y talleres. Consume la API REST del backend (FastAPI) en su versión actual (`/api/clients`, `/api/work-orders`, `/api/quotes`, `/api/invoices`, `/api/products`, `/api/users`, `/api/roles`, ...) para clientes, vehículos, servicios, categorías, órdenes de trabajo, presupuestos, facturación, recambios, proveedores, inventario, usuarios, roles y reportes.
+SPA de la aplicación de gestión de lavaderos y talleres. Consume la API REST del backend (FastAPI) en su versión actual (`/api/clients`, `/api/work-orders`, `/api/quotes`, `/api/invoices`, `/api/products`, `/api/users`, `/api/roles`, ...) para clientes, vehículos, servicios, categorías, órdenes de trabajo, presupuestos, facturación, recambios, proveedores, usuarios, roles y reportes.
 
 ## Stack
 
@@ -109,7 +109,7 @@ pnpm test      # Tests (si se configuran)
 - El token JWT se obtiene en el login y se envía en el header `Authorization: Bearer <token>`.
 - Ante respuestas `401`, el cliente redirige al login.
 - El estado del servidor se gestiona con React Query (caché, refetch y mutaciones).
-- Las operaciones de edición usan los `PUT` del backend; las acciones de negocio (`completar orden`, `convertir presupuesto`, `anular factura`) usan los endpoints `POST .../complete`, `.../convert` y `.../void`.
+- Las operaciones de edición usan los `PUT` del backend; las acciones de negocio (`completar orden`, `convertir presupuesto`) usan los endpoints `POST .../complete` y `.../convert`.
 
 ## Rutas principales
 
@@ -128,7 +128,6 @@ pnpm test      # Tests (si se configuran)
 | `/products` | Catálogo de productos |
 | `/product-categories` | Categorías de producto |
 | `/providers` | Proveedores |
-| `/inventory` | Inventario |
 | `/users` | Usuarios |
 | `/roles` | Roles y permisos (RBAC) |
 | `/reports` | Dashboard y reportes |

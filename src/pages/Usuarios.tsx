@@ -10,6 +10,7 @@ import { FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import { btnGhost, btnPrimary, btnSuccess, labelCls } from '../components/ui'
 import { createUser, deleteUser, listRoles, listUsers, updateUser, restoreUser } from '../services'
 import { userCreateSchema, userUpdateSchema } from '../lib/validation'
@@ -37,8 +38,12 @@ export default function Usuarios() {
   const [restoreInfo, setRestoreInfo] = useState<{ id: number; message: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState(false)
 
-  const query = useQuery({ queryKey: ['users'], queryFn: listUsers })
-  const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: listRoles })
+  const { items, total, page, totalPages, pageSize, setPage, isLoading } =
+    usePaginatedQuery<User>(['users'], listUsers)
+  const rolesQuery = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => listRoles({ all: true }).then((r) => r.items),
+  })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['users'] })
 
@@ -123,14 +128,15 @@ export default function Usuarios() {
         </div>
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
           columns={columns}
-          rows={query.data ?? []}
+          rows={items}
           rowKey={(u) => u.id}
           onRowClick={(u) => openEdit(u)}
+          pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
 

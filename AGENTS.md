@@ -1,6 +1,6 @@
 # Gestaller Web (frontend)
 
-SPA de gestión de lavaderos y talleres: clientes, vehículos, servicios, órdenes de trabajo, presupuestos, facturación, recambios e inventario, con usuarios/roles/permisos (RBAC), dashboard y reportes.
+SPA de gestión de lavaderos y talleres: clientes, vehículos, servicios, órdenes de trabajo, presupuestos, facturación, recambios y proveedores, con usuarios/roles/permisos (RBAC), dashboard y reportes.
 
 - **Stack**: React 18, Vite, TypeScript, Tailwind CSS 4, React Query, Zod.
 - **Repo hermano**: `gestaller-api` (backend FastAPI). El contrato entre ambos es la API + `docs/error-policy.md`.
@@ -25,9 +25,10 @@ docker compose -f docker-compose.dev.yml up --build
 
 ## Arquitectura
 
-- `src/pages/` — una página por módulo (17 + NotFound).
+- `src/pages/` — una página por módulo (18 + NotFound, incluye `Settings` en `/settings`).
 - `src/components/` — Modal, DataTable, ItemsForm, CategoryManager.
 - `src/hooks/useAuth.tsx` — token en localStorage, refresh token en cookie httpOnly (`/api/auth`), catálogo de permisos y `catalogReady`.
+- `src/hooks/usePaginatedQuery.ts` — listados paginados server-side (page + search con debounce; `queryKey` comparte prefijo con el modo `all` para que `invalidateQueries` invalide ambos).
 - `src/services/api.ts` — axios con cola de refresh concurrente al 401 y toasts de error.
 - `src/permissions.ts` — plantillas de roles (sin dependencias hardcodeadas).
 
@@ -36,12 +37,14 @@ docker compose -f docker-compose.dev.yml up --build
 - Errores de API según el contrato de `docs/error-policy.md` (código + mensaje + `fields`); el frontend nunca interpreta un fallo de query como lista vacía (`QueryCache.onError` global muestra toast).
 - **Permisos**: se consumen vía `GET /api/permissions/catalog` (fuente única: `seed_data/permissions.json` del backend). Añadir un permiso no requiere cambios en TS.
 - Código e identificadores en inglés; mensajes de usuario visibles en español.
-- Las facturas no se eliminan: solo se anulan. Presupuesto convertido no mostrable como eliminable (`canDelete` por fila en DataTable).
+- Las facturas no se eliminan ni se modifican tras emitirse (quedan invariables). Presupuesto convertido no mostrable como eliminable (`canDelete` por fila en DataTable).
 - Los ítems de documentos exigen exactamente un servicio o producto ("+ Añadir servicio" / "+ Añadir producto").
-- Edición siempre con los `PUT` del backend; acciones de negocio con `POST .../complete`, `.../convert`, `.../void`.
+- Edición siempre con los `PUT` del backend; acciones de negocio con `POST .../complete`, `.../convert`.
+- **Paginación server-side**: todo listado devuelve `Paginated<T>` (`{items, total, page, page_size}`) vía `listX(params?: ListParams) → Promise<Paginated<T>>` (`ListParams` = `{page?, pageSize?, all?, search?}`; `pageParams()` traduce a snake_case). Las tablas usan `usePaginatedQuery` + `<DataTable pagination={...} />`. **Los dropdowns/selects y mapas usan `{ all: true }`** para traer el catálogo completo, nunca un listado paginado.
+- `pagination.page_size` (parámetro del sistema editable en Ajustes `/settings`, permisos `settings.edit`) fija el tamaño de página por defecto; el footer de paginación de `DataTable` no expone selector de tamaño.
 
 ## Gotchas conocidos
 
 - Sin tests de frontend todavía (`pnpm lint` es la única verificación estática).
-- Búsqueda/filtrado server-side solo en Clientes.
+- Búsqueda/filtrado server-side con el param `search` **solo en Clientes y Vehículos**; en el resto de listados el backend lo ignora (devuelven todo paginado por `page`/`page_size`).
 - `tailwind.config.ts` no existe: Tailwind 4 se configura por CSS (`@import "tailwindcss"`).

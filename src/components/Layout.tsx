@@ -46,6 +46,9 @@ const navSections: NavSection[] = [
     title: 'Administración',
     items: [
       { to: '/users', label: 'Usuarios' },
+      { to: '/company-profile', label: 'Datos del taller' },
+      { to: '/tax-rates', label: 'Tasas de IVA' },
+      { to: '/settings', label: 'Ajustes' },
       { to: '/reports', label: 'Reportes' },
       { to: '/data', label: 'Datos' },
     ],
