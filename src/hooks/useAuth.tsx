@@ -1,5 +1,6 @@
 // Contexto de autenticación: token JWT, usuario actual y catálogo de permisos.
 
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createContext,
   useCallback,
@@ -44,8 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null
     }
   })
-  const [catalog, setCatalog] = useState<PermissionCatalog | null>(null)
-  const [catalogReady, setCatalogReady] = useState(false)
+  const queryClient = useQueryClient()
 
   const login = useCallback(async (username: string, password: string) => {
     const res = await authService.login(username, password)
@@ -62,50 +62,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USER_KEY)
     setToken(null)
     setUser(null)
-    setCatalog(null)
-    setCatalogReady(false)
-  }, [])
+    queryClient.removeQueries({ queryKey: ['permissions-catalog'] })
+    queryClient.removeQueries({ queryKey: ['auth-me'] })
+  }, [queryClient])
 
-  useEffect(() => {
-    if (!token) {
-      setCatalog(null)
-      setCatalogReady(false)
-      return
-    }
-    let cancelled = false
-    fetchPermissionCatalog()
-      .then((data) => {
-        if (cancelled) return
-        setCatalog(data)
-        setCatalogReady(true)
-      })
-      .catch(() => {
-        // Sin catálogo no hay permisos: se decide con catalogReady=true.
-        if (!cancelled) setCatalogReady(true)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [token])
+  // Catálogo de permisos vía React Query: configuración estática que se
+  // beneficia de caché, isPending/isError y del toast global de error.
+  const catalogQuery = useQuery<PermissionCatalog, Error, PermissionCatalog>({
+    queryKey: ['permissions-catalog'],
+    queryFn: fetchPermissionCatalog,
+    enabled: !!token,
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
+    retry: false,
+  })
+  const catalog = catalogQuery.data ?? null
+  const catalogReady = !catalogQuery.isPending
 
+  // Sesión actual (/auth/me): el user sale de localStorage al arrancar
+  // (bootstrap síncrono) y esta query lo refresca al volver a la ventana.
+  // En error devuelve null sin lanzar (no hay toast espurio): la expiración
+  // real de sesión la gestiona el interceptor de api.ts (refresh + redirect).
+  const meQuery = useQuery<User | null, Error, User | null>({
+    queryKey: ['auth-me'],
+    queryFn: async () => {
+      try {
+        return await authService.fetchMe()
+      } catch {
+        return null
+      }
+    },
+    enabled: !!token,
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  })
+  // Persiste el usuario refrescado (p. ej. al volver a la ventana) en
+  // localStorage para el bootstrap síncrono del siguiente arranque.
   useEffect(() => {
-    if (!token) return
-    const refresh = () => {
-      authService
-        .fetchMe()
-        .then((me) => {
-          localStorage.setItem(USER_KEY, JSON.stringify(me))
-          setUser(me)
-        })
-        .catch(() => {})
+    if (meQuery.data) {
+      localStorage.setItem(USER_KEY, JSON.stringify(meQuery.data))
     }
-    window.addEventListener('focus', refresh)
-    return () => window.removeEventListener('focus', refresh)
-  }, [token])
+  }, [meQuery.data])
+  const activeUser = meQuery.data ?? user
 
   const can = useCallback(
-    (permission: string) => user?.permissions?.includes(permission) ?? false,
-    [user],
+    (permission: string) => activeUser?.permissions?.includes(permission) ?? false,
+    [activeUser],
   )
 
   const getPermissionsForRoute = useCallback(
@@ -119,8 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ user, token, login, logout, can, catalog, catalogReady, getPermissionsForRoute, getModules }),
-    [user, token, login, logout, can, catalog, catalogReady, getPermissionsForRoute, getModules],
+    () => ({ user: activeUser, token, login, logout, can, catalog, catalogReady, getPermissionsForRoute, getModules }),
+    [activeUser, token, login, logout, can, catalog, catalogReady, getPermissionsForRoute, getModules],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
