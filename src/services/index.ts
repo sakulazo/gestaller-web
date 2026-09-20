@@ -187,6 +187,10 @@ export const cancelWorkOrder = (id: number): Promise<WorkOrder> =>
   api.post<WorkOrder>(`/work-orders/${id}/cancel`).then((r) => r.data)
 export const reactivateWorkOrder = (id: number): Promise<WorkOrder> =>
   api.post<WorkOrder>(`/work-orders/${id}/reactivate`).then((r) => r.data)
+export const archiveWorkOrder = (id: number): Promise<WorkOrder> =>
+  api.post<WorkOrder>(`/work-orders/${id}/archive`).then((r) => r.data)
+export const unarchiveWorkOrder = (id: number): Promise<WorkOrder> =>
+  api.post<WorkOrder>(`/work-orders/${id}/unarchive`).then((r) => r.data)
 export const deleteWorkOrder = (id: number): Promise<void> =>
   api.delete(`/work-orders/${id}`)
 // Ítems de órdenes de trabajo
@@ -208,12 +212,14 @@ export const listQuotes = (params?: ListParams) =>
   api
     .get<Paginated<Quote>>('/quotes', { params: pageParams(params) })
     .then((r) => r.data)
+export const getQuote = (id: number): Promise<Quote> =>
+  api.get<Quote>(`/quotes/${id}`).then((r) => r.data)
 export const createQuote = (payload: QuoteInput): Promise<Quote> =>
   api.post<Quote>('/quotes', payload).then((r) => r.data)
 export const updateQuote = (id: number, payload: Partial<QuoteInput>): Promise<Quote> =>
   api.put<Quote>(`/quotes/${id}`, payload).then((r) => r.data)
-export const convertQuote = (id: number): Promise<Invoice> =>
-  api.post<Invoice>(`/quotes/${id}/convert`).then((r) => r.data)
+export const convertQuote = (id: number): Promise<WorkOrder> =>
+  api.post<WorkOrder>(`/quotes/${id}/convert`).then((r) => r.data)
 export const deleteQuote = (id: number): Promise<void> =>
   api.delete(`/quotes/${id}`)
 

@@ -27,6 +27,7 @@ import CheckInPrint from './pages/CheckInPrint'
 import Presupuestos from './pages/Presupuestos'
 import Facturas from './pages/Facturas'
 import InvoicePrint from './pages/InvoicePrint'
+import QuotePrint from './pages/QuotePrint'
 import Productos from './pages/Productos'
 import CategoriasProducto from './pages/CategoriasProducto'
 import Proveedores from './pages/Proveedores'
@@ -122,6 +123,16 @@ export default function App() {
                     <ProtectedRoute>
                       <RequirePermission module="/invoices">
                         <InvoicePrint />
+                      </RequirePermission>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/quotes/:id/print"
+                  element={
+                    <ProtectedRoute>
+                      <RequirePermission module="/quotes">
+                        <QuotePrint />
                       </RequirePermission>
                     </ProtectedRoute>
                   }

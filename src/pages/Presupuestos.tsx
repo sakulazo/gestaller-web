@@ -1,4 +1,4 @@
-// Presupuestos (creación con líneas, aprobar, convertir en factura).
+// Presupuestos (creación con líneas, aprobar, convertir en orden de trabajo).
 
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -95,13 +95,13 @@ export default function Presupuestos() {
   })
   const convertMutation = useMutation({
     mutationFn: convertQuote,
-    onSuccess: () => {
+    onSuccess: (order) => {
       invalidate()
-      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] })
       setModalOpen(false)
       setEditing(null)
       setItems([])
-      toast.success('Presupuesto convertido en factura correctamente')
+      toast.success(`Presupuesto convertido en la orden ${order.number} correctamente`)
     },
   })
   const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<Quote, QuoteInput>({
@@ -164,6 +164,7 @@ export default function Presupuestos() {
 
   const clientsUnavailable = clientsQuery.isError
   const vehiclesUnavailable = vehiclesQuery.isError
+  const isFrozen = editing?.status === 'aprobado' || editing?.status === 'convertido'
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -184,16 +185,20 @@ export default function Presupuestos() {
 
   const columns: Column<Quote>[] = [
     { key: 'number', header: 'Número' },
-    { key: 'client_id', header: 'Cliente ID' },
+    {
+      key: 'client_name',
+      header: 'Cliente',
+      render: (p) => p.client_name ?? `Cliente ${p.client_id}`,
+    },
     {
       key: 'motor_vehicle_id',
       header: 'Vehículo a motor',
-      render: (p) => p.motor_vehicle ? vehicleLabel(p.motor_vehicle) : '—',
+      render: (p) => (p.motor_make ? `${p.motor_plate} — ${p.motor_make} ${p.motor_model ?? ''}`.trim() : p.motor_vehicle ? vehicleLabel(p.motor_vehicle) : '—'),
     },
     {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
-      render: (p) => p.trailer_vehicle ? vehicleLabel(p.trailer_vehicle) : '—',
+      render: (p) => (p.trailer_make ? `${p.trailer_plate} — ${p.trailer_make} ${p.trailer_model ?? ''}`.trim() : p.trailer_vehicle ? vehicleLabel(p.trailer_vehicle) : '—'),
     },
     {
       key: 'mileage',
@@ -211,6 +216,19 @@ export default function Presupuestos() {
       render: (p) => `${Number(p.total).toFixed(2)} €`,
     },
     { key: 'valid_until', header: 'Válido hasta' },
+    {
+      key: 'print',
+      header: '',
+      render: (p) => (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); window.open(`/quotes/${p.id}/print`, '_blank') }}
+          className="rounded border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+        >
+          Imprimir
+        </button>
+      ),
+    },
   ]
 
   return (
@@ -244,12 +262,12 @@ export default function Presupuestos() {
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              {editing && clientsUnavailable ? (
+              {editing && (clientsUnavailable || isFrozen) ? (
                 <>
                   <input type="hidden" name="client_id" value={editing.client_id} />
                   <label className={labelCls}>Cliente *</label>
                   <input
-                    value={`Cliente ${editing.client_id}`}
+                    value={editing.client_name ?? `Cliente ${editing.client_id}`}
                     disabled
                     className={`${inputCls} w-full opacity-70`}
                   />
@@ -288,7 +306,7 @@ export default function Presupuestos() {
               )}
             </div>
             <div>
-              {editing && vehiclesUnavailable ? (
+              {editing && (vehiclesUnavailable || isFrozen) ? (
                 <>
                   <input type="hidden" name="motor_vehicle_id" value={editing.motor_vehicle_id ?? ''} />
                   <label className={labelCls}>Vehículo a motor</label>
@@ -316,7 +334,7 @@ export default function Presupuestos() {
               )}
             </div>
             <div>
-              {editing && vehiclesUnavailable ? (
+              {editing && (vehiclesUnavailable || isFrozen) ? (
                 <>
                   <input type="hidden" name="trailer_vehicle_id" value={editing.trailer_vehicle_id ?? ''} />
                   <label className={labelCls}>Remolque</label>
@@ -351,6 +369,7 @@ export default function Presupuestos() {
                   min={0}
                   defaultValue={editing?.mileage ?? ''}
                   placeholder="km"
+                  disabled={isFrozen}
                   className={`${inputCls} w-full`}
                 />
                 <FieldError message={fieldErrors.mileage} />
@@ -358,23 +377,34 @@ export default function Presupuestos() {
             )}
             <div>
               <label className={labelCls}>Estado</label>
-              <select name="status" defaultValue={editing?.status ?? 'pendiente'} className={`${inputCls} w-full`}>
-                {Object.entries(statusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              {isFrozen ? (
+                <input
+                  value={statusLabels[editing!.status] ?? editing!.status}
+                  disabled
+                  className={`${inputCls} w-full opacity-70`}
+                />
+              ) : (
+                <select name="status" defaultValue={editing?.status ?? 'pendiente'} className={`${inputCls} w-full`}>
+                  {Object.entries(statusLabels)
+                    .filter(([value]) => value !== 'convertido')
+                    .map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                </select>
+              )}
             </div>
             <div>
               <label className={labelCls}>Validez (días)</label>
-              <input name="validity_days" type="number" min={1} defaultValue={editing?.validity_days ?? 30} className={`${inputCls} w-full`} />
+              <input name="validity_days" type="number" min={1} defaultValue={editing?.validity_days ?? 30} disabled={isFrozen} className={`${inputCls} w-full`} />
             </div>
             <div className="col-span-2">
               <FormTextarea
                 name="description"
                 label="Descripción"
                 rows={3}
+                disabled={isFrozen}
                 defaultValue={editing?.description ?? ''}
               />
             </div>
@@ -383,6 +413,7 @@ export default function Presupuestos() {
                 name="notes"
                 label="Observaciones"
                 rows={3}
+                disabled={isFrozen}
                 defaultValue={editing?.notes ?? ''}
               />
             </div>
@@ -395,6 +426,7 @@ export default function Presupuestos() {
               onChange={setItems}
               services={servicesQuery.data}
               products={productsQuery.data}
+              disabled={isFrozen}
             />
             <p className="mt-2 text-sm text-slate-600">
               Total estimado: <strong>{itemTotal(items).toFixed(2)} €</strong>
@@ -404,6 +436,11 @@ export default function Presupuestos() {
           <div className="flex justify-between">
             {editing && (
               <div className="flex gap-2">
+                {can('quotes.view') && (
+                  <button type="button" onClick={() => window.open(`/quotes/${editing.id}/print`, '_blank')} className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                    Imprimir
+                  </button>
+                )}
                 {can('quotes.delete') && editing.status !== 'convertido' && (
                   <button type="button" onClick={() => setPendingDelete(true)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                     Eliminar
@@ -416,7 +453,7 @@ export default function Presupuestos() {
                 )}
                 {can('quotes.convert') && editing.status === 'aprobado' && (
                   <button type="button" onClick={() => convertMutation.mutate(editing.id)} className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500">
-                    Convertir en factura
+                    Convertir en orden
                   </button>
                 )}
               </div>
@@ -425,9 +462,11 @@ export default function Presupuestos() {
               <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
                 Cancelar
               </button>
-              <button type="submit" disabled={isPending} className={btnSuccess}>
-                {isPending ? 'Guardando…' : 'Guardar'}
-              </button>
+              {!isFrozen && (
+                <button type="submit" disabled={isPending} className={btnSuccess}>
+                  {isPending ? 'Guardando…' : 'Guardar'}
+                </button>
+              )}
             </div>
           </div>
         </form>
