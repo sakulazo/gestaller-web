@@ -96,6 +96,7 @@ export interface CompanyProfile extends Base {
 
 export interface Vehicle extends Base {
   client_id: number
+  client_name: string | null
   category_id: number | null
   plate: string
   make: string
@@ -190,6 +191,47 @@ export interface Item {
   discount: number
   duration_minutes: number | null
   tax_rate_id: number | null
+  tax_rate?: number | null
+  tax_rate_name?: string | null
+}
+
+// Snapshots de cabecera congelados en los documentos al emitirse/aprobarse
+// (los maestros pueden cambiar después sin alterar documentos ya fijados).
+export interface ClientSnapshot {
+  client_name: string | null
+  client_tax_id: string | null
+  client_phone: string | null
+  client_email: string | null
+  client_address: string | null
+  client_postal_code: string | null
+  client_state: string | null
+  client_city: string | null
+  client_country: string | null
+}
+
+export interface VehicleSnapshot {
+  motor_plate: string | null
+  motor_make: string | null
+  motor_model: string | null
+  motor_year: number | null
+  motor_color: string | null
+  trailer_plate: string | null
+  trailer_make: string | null
+  trailer_model: string | null
+  trailer_year: number | null
+  trailer_color: string | null
+}
+
+export interface IssuerSnapshot {
+  issuer_legal_name: string | null
+  issuer_tax_id: string | null
+  issuer_rii_number: string | null
+  issuer_address: string | null
+  issuer_postal_code: string | null
+  issuer_state: string | null
+  issuer_city: string | null
+  issuer_phone: string | null
+  issuer_email: string | null
 }
 
 export interface WorkOrderItem extends Item {
@@ -197,6 +239,8 @@ export interface WorkOrderItem extends Item {
   completed_at: string | null
   cancelled_at: string | null
   derived_status: WorkOrderItemStatus
+  assigned_user?: { id: number; name: string } | null
+  assigned_user_name?: string | null
 }
 
 export interface QuoteItem extends Item {
@@ -224,8 +268,9 @@ export interface ProductProvider {
 
 export type ItemInput = Omit<Item, 'id'>
 
-export interface WorkOrder extends Base {
+export interface WorkOrder extends Base, ClientSnapshot, VehicleSnapshot {
   number: string
+  quote_id: number | null
   client_id: number
   motor_vehicle_id: number | null
   trailer_vehicle_id: number | null
@@ -240,13 +285,14 @@ export interface WorkOrder extends Base {
   cancelled_at: string | null
   derived_status: WorkOrderStatus
   invoiced_at: string | null
+  archived_at: string | null
   items: WorkOrderItem[]
   client_name: string | null
   motor_vehicle: Vehicle | null
   trailer_vehicle: Vehicle | null
 }
 
-export interface Quote extends Base {
+export interface Quote extends Base, ClientSnapshot, VehicleSnapshot {
   number: string
   client_id: number
   motor_vehicle_id: number | null
@@ -264,7 +310,11 @@ export interface Quote extends Base {
   trailer_vehicle: Vehicle | null
 }
 
-export interface Invoice extends Base {
+export interface Invoice
+  extends Base,
+    ClientSnapshot,
+    VehicleSnapshot,
+    IssuerSnapshot {
   number: string
   client_id: number
   motor_vehicle_id: number | null

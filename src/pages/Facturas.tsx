@@ -27,14 +27,16 @@ export default function Facturas() {
   const columns: Column<Invoice>[] = [
     { key: 'number', header: 'Número' },
     { key: 'date', header: 'Fecha emisión', render: (f) => formatDate(f.date) },
-    { key: 'client', header: 'Cliente', render: (f) => f.client.name },
+    { key: 'client', header: 'Cliente', render: (f) => f.client_name ?? f.client?.name ?? '—' },
     {
       key: 'motor_vehicle_id',
       header: 'Vehículos',
       render: (f) => {
         const plates: string[] = []
-        if (f.motor_vehicle) plates.push(f.motor_vehicle.plate)
-        if (f.trailer_vehicle) plates.push(f.trailer_vehicle.plate)
+        const motor = f.motor_plate ?? f.motor_vehicle?.plate
+        const trailer = f.trailer_plate ?? f.trailer_vehicle?.plate
+        if (motor) plates.push(motor)
+        if (trailer) plates.push(trailer)
         return plates.length ? plates.join(' — ') : '—'
       },
     },

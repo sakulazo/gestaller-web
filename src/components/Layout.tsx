@@ -1,8 +1,9 @@
 // Layout principal con barra lateral de navegación agrupada por funcionalidad.
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 
 interface NavItem {
   to: string
@@ -59,16 +60,36 @@ export default function Layout() {
   const { user, logout, can, getPermissionsForRoute } = useAuth()
   const navigate = useNavigate()
   const [openSections, setOpenSections] = useState<string[]>([])
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [tabletOpen, setTabletOpen] = useState<string | null>(null)
+  const tabletNavRef = useRef<HTMLDivElement>(null)
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
+  const isTablet = useMediaQuery('(min-width: 768px)')
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
+  useEffect(() => {
+    if (tabletOpen === null) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (tabletNavRef.current && !tabletNavRef.current.contains(e.target as Node)) {
+        setTabletOpen(null)
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [tabletOpen])
+
   const toggleSection = (title: string) => {
     setOpenSections((prev) =>
       prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title],
     )
+  }
+
+  const toggleTabletSection = (title: string) => {
+    setTabletOpen((prev) => (prev === title ? null : title))
   }
 
   const visibleSections = navSections
@@ -81,54 +102,164 @@ export default function Layout() {
     }))
     .filter((section) => section.items.length > 0)
 
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `block rounded px-3 py-2 text-sm ${
+      isActive ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800'
+    }`
+
+  const renderLinks = (items: NavItem[]) =>
+    items.map((item) => (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        end={item.end}
+        className={linkClass}
+        onClick={() => setMobileOpen(false)}
+      >
+        {item.label}
+      </NavLink>
+    ))
+
+  const renderSections = (navClass: string) => (
+    <nav className={navClass}>
+      {visibleSections.map((section, i) => {
+        const open = !section.title || openSections.includes(section.title)
+        return (
+          <div key={section.title ?? i}>
+            {section.title ? (
+              <button
+                onClick={() => toggleSection(section.title!)}
+                className="flex w-full items-center justify-between rounded px-3 pb-1 pt-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+              >
+                {section.title}
+                <span className="text-slate-600">{open ? '−' : '+'}</span>
+              </button>
+            ) : null}
+            {open && renderLinks(section.items)}
+          </div>
+        )
+      })}
+    </nav>
+  )
+
+  const renderUser = () => (
+    <div className="border-t border-slate-800 p-4">
+      <p className="truncate text-sm">{user?.name}</p>
+      <button
+        onClick={handleLogout}
+        className="mt-2 text-xs text-slate-400 hover:text-white"
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  )
+
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      <aside className="flex w-56 flex-col bg-slate-900 text-slate-100">
-        <div className="px-4 py-5 text-lg font-bold">Gestaller</div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-2">
-          {visibleSections.map((section, i) => {
-            const open = !section.title || openSections.includes(section.title)
-            return (
-              <div key={section.title ?? i}>
-                {section.title ? (
+    <div className="flex min-h-screen flex-col bg-slate-100 md:flex-row">
+      {!isDesktop && (
+        <header className="bg-slate-900 text-slate-100">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setMobileOpen(true)}
+                aria-label="Abrir menú"
+                className="text-xl leading-none sm:hidden"
+              >
+                ☰
+              </button>
+              <div className="text-lg font-bold">Gestaller</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <p className="hidden truncate text-sm sm:block">{user?.name}</p>
+              <button
+                onClick={handleLogout}
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </header>
+      )}
+
+      {!isDesktop && isTablet && (
+        <nav
+          ref={tabletNavRef}
+          className="relative border-t border-slate-800 bg-slate-900 text-slate-100"
+        >
+          <div className="flex flex-wrap items-center gap-1 px-3 py-2">
+            {visibleSections.map((section) =>
+              section.title ? (
+                <div key={section.title} className="relative">
                   <button
-                    onClick={() => toggleSection(section.title!)}
-                    className="flex w-full items-center justify-between rounded px-3 pb-1 pt-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+                    onClick={() => toggleTabletSection(section.title!)}
+                    aria-expanded={tabletOpen === section.title}
+                    className={`flex shrink-0 items-center gap-1 rounded px-3 py-2 text-sm ${
+                      tabletOpen === section.title
+                        ? 'bg-slate-800 text-white'
+                        : 'text-slate-300 hover:bg-slate-800'
+                    }`}
                   >
                     {section.title}
-                    <span className="text-slate-600">{open ? '−' : '+'}</span>
+                    <span className="text-xs text-slate-500">
+                      {tabletOpen === section.title ? '▲' : '▼'}
+                    </span>
                   </button>
-                ) : null}
-                {open &&
-                  section.items.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.end}
-                      className={({ isActive }) =>
-                        `block rounded px-3 py-2 text-sm ${
-                          isActive
-                            ? 'bg-slate-700 text-white'
-                            : 'text-slate-300 hover:bg-slate-800'
-                        }`
-                      }
-                    >
-                      {item.label}
-                    </NavLink>
-                  ))}
-              </div>
-            )
-          })}
+                  {tabletOpen === section.title && (
+                    <div className="absolute left-0 top-full z-10 mt-1 w-max min-w-48 rounded-md border border-slate-700 bg-slate-900 py-2 shadow-xl">
+                      {renderLinks(section.items)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <NavLink
+                  key={section.items[0].to}
+                  to={section.items[0].to}
+                  end={section.items[0].end}
+                  onClick={() => setTabletOpen(null)}
+                  className={({ isActive }) =>
+                    `shrink-0 rounded px-3 py-2 text-sm ${
+                      isActive
+                        ? 'bg-slate-700 text-white'
+                        : 'text-slate-300 hover:bg-slate-800'
+                    }`
+                  }
+                >
+                  {section.items[0].label}
+                </NavLink>
+              ),
+            )}
+          </div>
         </nav>
-        <div className="border-t border-slate-800 p-4">
-          <p className="truncate text-sm">{user?.name}</p>
-          <button
-            onClick={handleLogout}
-            className="mt-2 text-xs text-slate-400 hover:text-white"
-          >
-            Cerrar sesión
-          </button>
+      )}
+
+      {!isDesktop && mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="animate-fade-in absolute inset-0 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="animate-scale-in absolute inset-y-0 left-0 flex w-64 flex-col bg-slate-900 text-slate-100 shadow-xl">
+            <div className="flex items-center justify-between px-4 py-5">
+              <div className="text-lg font-bold">Gestaller</div>
+              <button
+                onClick={() => setMobileOpen(false)}
+                aria-label="Cerrar menú"
+                className="text-xl leading-none text-slate-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            {renderSections('flex-1 space-y-1 overflow-y-auto px-2')}
+            {renderUser()}
+          </aside>
         </div>
+      )}
+
+      <aside className="hidden w-56 flex-col bg-slate-900 text-slate-100 md:flex">
+        <div className="px-4 py-5 text-lg font-bold">Gestaller</div>
+        {renderSections('flex-1 space-y-1 overflow-y-auto px-2')}
+        {renderUser()}
       </aside>
       <main className="flex-1 p-6">
         <Outlet />

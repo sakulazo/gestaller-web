@@ -113,15 +113,15 @@ export default function ItemsForm({
           <table className="min-w-full table-fixed text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Tipo</th>
-                <th className="w-[22.5rem] px-3 py-2 text-left font-medium">Concepto</th>
-                <th className="w-[120px] px-3 py-2 text-left font-medium">Precio</th>
-                <th className="w-[120px] px-3 py-2 text-left font-medium">Cantidad</th>
-                <th className="w-[120px] px-3 py-2 text-left font-medium">Descuento</th>
+                <th className="px-3 py-2 text-center font-medium">Tipo</th>
+                <th className="w-[22.5rem] px-3 py-2 text-center font-medium">Concepto</th>
+                <th className="w-[120px] px-3 py-2 text-center font-medium">Precio</th>
+                <th className="w-[120px] px-3 py-2 text-center font-medium">Cantidad</th>
+                <th className="w-[120px] px-3 py-2 text-center font-medium">Descuento</th>
                 {showTaxRate && (
-                  <th className="w-[120px] px-3 py-2 text-left font-medium">IVA</th>
+                  <th className="w-[120px] px-3 py-2 text-center font-medium">IVA</th>
                 )}
-                <th className="w-[130px] px-3 py-2 text-right font-medium">Subtotal</th>
+                <th className="w-[130px] px-3 py-2 text-center font-medium">Subtotal</th>
                 <th className="w-16 px-3 py-2" />
               </tr>
             </thead>

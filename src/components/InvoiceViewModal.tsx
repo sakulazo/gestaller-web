@@ -37,20 +37,36 @@ export default function InvoiceViewModal({
 
   const items = invoice.items ?? []
 
+  const clientName = invoice.client_name ?? invoice.client?.name ?? '—'
+  const motorVehicle = invoice.motor_plate
+    ? {
+        plate: invoice.motor_plate,
+        make: invoice.motor_make ?? '',
+        model: invoice.motor_model,
+      }
+    : invoice.motor_vehicle
+  const trailerVehicle = invoice.trailer_plate
+    ? {
+        plate: invoice.trailer_plate,
+        make: invoice.trailer_make ?? '',
+        model: invoice.trailer_model,
+      }
+    : invoice.trailer_vehicle
+
   return (
     <Modal open title={`Factura ${invoice.number}`} wide onClose={onClose}>
       <div className="space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-lg font-semibold text-slate-800">{invoice.client.name}</p>
+            <p className="text-lg font-semibold text-slate-800">{clientName}</p>
             <p className="mt-1 text-sm text-slate-500">
               Vehículo:{' '}
-              <span className="font-medium text-slate-700">{vehicleLabel(invoice.motor_vehicle)}</span>
-              {invoice.trailer_vehicle && (
+              <span className="font-medium text-slate-700">{vehicleLabel(motorVehicle)}</span>
+              {trailerVehicle && (
                 <>
                   {' '}
                   · Remolque:{' '}
-                  <span className="font-medium text-slate-700">{vehicleLabel(invoice.trailer_vehicle)}</span>
+                  <span className="font-medium text-slate-700">{vehicleLabel(trailerVehicle)}</span>
                 </>
               )}
             </p>
@@ -67,9 +83,9 @@ export default function InvoiceViewModal({
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
           <DetailRow label="Número" value={invoice.number} />
           <DetailRow label="Fecha de emisión" value={formatDate(invoice.date)} />
-          <DetailRow label="Cliente" value={invoice.client.name} />
-          <DetailRow label="Vehículo a motor" value={vehicleLabel(invoice.motor_vehicle)} />
-          <DetailRow label="Remolque" value={vehicleLabel(invoice.trailer_vehicle)} />
+          <DetailRow label="Cliente" value={clientName} />
+          <DetailRow label="Vehículo a motor" value={vehicleLabel(motorVehicle)} />
+          <DetailRow label="Remolque" value={vehicleLabel(trailerVehicle)} />
           <DetailRow label="Orden asociada" value={invoice.work_order_number ?? '—'} />
           <DetailRow label="Kilometraje" value={invoice.mileage != null ? `${invoice.mileage.toLocaleString('es-ES')} km` : '—'} />
         </dl>
@@ -94,12 +110,12 @@ export default function InvoiceViewModal({
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">Tipo</th>
-                    <th className="px-3 py-2 text-left font-medium">Concepto</th>
-                    <th className="px-3 py-2 text-left font-medium">Cant.</th>
-                    <th className="px-3 py-2 text-left font-medium">P. unitario</th>
-                    <th className="px-3 py-2 text-left font-medium">Dto. (%)</th>
-                    <th className="px-3 py-2 text-right font-medium">Subtotal</th>
+                    <th className="px-3 py-2 text-center font-medium">Tipo</th>
+                    <th className="px-3 py-2 text-center font-medium">Concepto</th>
+                    <th className="px-3 py-2 text-center font-medium">Cant.</th>
+                    <th className="px-3 py-2 text-center font-medium">P. unitario</th>
+                    <th className="px-3 py-2 text-center font-medium">Dto. (%)</th>
+                    <th className="px-3 py-2 text-center font-medium">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

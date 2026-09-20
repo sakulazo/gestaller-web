@@ -48,3 +48,19 @@ docker compose -f docker-compose.dev.yml up --build
 - Sin tests de frontend todavía (`pnpm lint` es la única verificación estática).
 - Búsqueda/filtrado server-side con el param `search` **solo en Clientes y Vehículos**; en el resto de listados el backend lo ignora (devuelven todo paginado por `page`/`page_size`).
 - `tailwind.config.ts` no existe: Tailwind 4 se configura por CSS (`@import "tailwindcss"`).
+
+## Responsive (3 tamaños)
+
+Breakpoints propios definidos en `src/index.css` (`@theme`), mobile-first:
+
+| Tamaño | Rango | Prefijo |
+|---|---|---|
+| Mobile | 0 – 767px | estilos base (sin prefijo) |
+| Tablet | 768 – 1023px | `sm:` |
+| Desktop | ≥ 1024px | `md:` (`lg:` reservado en 1536px) |
+
+El layout (`src/components/Layout.tsx`) presenta el menú según el tamaño:
+
+- **Mobile (<768px)**: barra top con botón ☰ que abre un drawer deslizante con el acordeón de navegación.
+- **Tablet (768–1023px)**: header de 2 filas — barra de marca (usuario y "Cerrar sesión" a la derecha) y debajo el nav inline con scroll horizontal agrupado por secciones.
+- **Desktop (≥1024px)**: sidebar lateral fijo a la izquierda.

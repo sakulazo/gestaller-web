@@ -27,8 +27,8 @@ import type { Vehicle, VehicleInput } from '../types'
 
 const columns: Column<Vehicle>[] = [
   { key: 'plate', header: 'Matrícula', render: (v) => <div className="text-center">{v.plate}</div> },
-  { key: 'make', header: 'Marca' },
-  { key: 'model', header: 'Modelo' },
+  { key: 'make', header: 'Marca', align: 'left' },
+  { key: 'model', header: 'Modelo', align: 'left' },
   { key: 'year', header: 'Año', render: (v) => <div className="text-center">{v.year ?? ''}</div> },
 ]
 
@@ -49,6 +49,7 @@ export default function Vehiculos() {
   const clientsQuery = useQuery({
     queryKey: ['clients'],
     queryFn: () => listClients({ all: true }).then((r) => r.items),
+    enabled: can('clients.view'),
   })
   const categoriesQuery = useQuery({
     queryKey: ['vehicle-categories'],
@@ -63,8 +64,8 @@ export default function Vehiculos() {
 
   const tableColumns: Column<Vehicle>[] = [
     ...columns,
-    { key: 'client_id', header: 'Propietario', render: (v) => clientName(v.client_id) },
-    { key: 'category_id', header: 'Categoría', render: (v) => categoryName(v.category_id) },
+    { key: 'client_id', header: 'Propietario', align: 'left', render: (v) => v.client_name ?? clientName(v.client_id) },
+    { key: 'category_id', header: 'Categoría', align: 'left', render: (v) => categoryName(v.category_id) },
 
   ]
 
@@ -167,7 +168,6 @@ export default function Vehiculos() {
           rows={items}
           rowKey={(v) => v.id}
           onRowClick={(v) => openEdit(v)}
-          headerAlign="center"
           pagination={{ page, totalPages, total, pageSize, onPageChange: setPage }}
         />
       )}
@@ -188,10 +188,17 @@ export default function Vehiculos() {
               name="client_id"
               required
               placeholder="Selecciona un cliente…"
-              options={(clientsQuery.data ?? []).map((c) => ({
-                value: String(c.id),
-                label: c.name,
-              }))}
+              options={[
+                ...(editing &&
+                editing.client_name &&
+                !(clientsQuery.data ?? []).some((c) => c.id === editing.client_id)
+                  ? [{ value: String(editing.client_id), label: editing.client_name }]
+                  : []),
+                ...(clientsQuery.data ?? []).map((c) => ({
+                  value: String(c.id),
+                  label: c.name,
+                })),
+              ]}
               value={clientId}
               onChange={setClientId}
             />

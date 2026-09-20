@@ -4,7 +4,7 @@
 // Se usa tanto en página propia (/work-orders/:id/items) como embebido en un
 // modal apilado sobre el modal de la orden (embedded).
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -226,7 +226,7 @@ export default function OrdenItems({
   const rawId = useParams().id
   const id = workOrderId ?? Number(rawId)
   const navigate = useNavigate()
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const toast = useToast()
   const queryClient = useQueryClient()
 
@@ -271,12 +271,6 @@ export default function OrdenItems({
       order?.derived_status === 'en_progreso' ||
       order?.derived_status === 'completada' ||
       order?.derived_status === 'entregada')
-
-  const userName = useMemo(() => {
-    const m = new Map<number, string>()
-    for (const u of usersQuery.data ?? []) m.set(u.id, u.name)
-    return (uid: number | null) => (uid != null ? m.get(uid) ?? `Usuario ${uid}` : '—')
-  }, [usersQuery.data])
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['work-order-items', id] })
@@ -357,6 +351,13 @@ export default function OrdenItems({
   const canComplete = can('work_order_items.complete')
   const canCancel = can('work_order_items.cancel')
 
+  // Usuarios scoped (sin work_orders.view_all) solo operan sobre sus ítems
+  // (service asignado a ellos); los productos no tienen dueño y siempre se
+  // gestionan desde la orden.
+  const scoped = !can('work_orders.view_all')
+  const canActOnItem = (it: WorkOrderItem) =>
+    !scoped || it.item_type === 'product' || it.assigned_to === user?.id
+
   if (orderQuery.isLoading || itemsQuery.isLoading) {
     return <p className="text-slate-500">Cargando…</p>
   }
@@ -384,8 +385,8 @@ export default function OrdenItems({
           <p className={`text-sm text-slate-500 ${embedded ? '' : 'mt-1'}`}>
             {order.client_name ?? `Cliente ${order.client_id}`}
             {' · '}
-            {order.motor_vehicle?.plate ?? '—'}
-            {order.trailer_vehicle ? ` / ${order.trailer_vehicle.plate}` : ''}
+            {order.motor_plate ?? order.motor_vehicle?.plate ?? '—'}
+            {order.trailer_plate ?? order.trailer_vehicle ? ` / ${order.trailer_plate ?? order.trailer_vehicle?.plate}` : ''}
             {' · '}
             <span
               className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -453,7 +454,9 @@ export default function OrdenItems({
                     {it.item_type === 'service' ? 'Servicio' : 'Producto'}
                   </td>
                   <td className="w-[17rem] px-3 py-3">{it.description || '—'}</td>
-                  <td className="w-40 px-3 py-3 text-center">{userName(it.assigned_to)}</td>
+                  <td className="w-40 px-3 py-3 text-center">
+                      {it.assigned_user_name ?? it.assigned_user?.name ?? (it.assigned_to != null ? `Usuario ${it.assigned_to}` : '—')}
+                    </td>
                   <td className="w-20 px-3 py-3 text-center">{it.quantity}</td>
                   <td className="w-24 px-3 py-3 text-center">{it.duration_minutes != null ? `${it.duration_minutes} min` : '—'}</td>
                   <td className="w-28 px-3 py-3 text-center">
@@ -466,7 +469,7 @@ export default function OrdenItems({
                     </span>
                   </td>
                   <td className="w-[13rem] px-3 py-3">
-                    {canModify && (
+                    {canModify && canActOnItem(it) && (
                       <div className="flex flex-wrap justify-center gap-1">
                         {canEditDoc && (
                           <button type="button" onClick={() => startEdit(it)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50">

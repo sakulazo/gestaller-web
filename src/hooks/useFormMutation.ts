@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from 'react'
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'
-import { emitToast } from '../components/Toast'
 import { toApplicationError } from '../types/errors'
 import type { ZodSchema } from 'zod'
 
@@ -72,7 +71,6 @@ export function useFormMutation<TData, TVariables>({
           setFieldErrors(appErr.fields)
         } else if (appErr.code !== 'VALIDATION_ERROR') {
           setGeneralError(appErr.message)
-          emitToast('error', appErr.message)
         }
 
         throw err

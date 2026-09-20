@@ -27,6 +27,7 @@ import {
   listVehicles,
   listWorkOrders,
   reactivateWorkOrder,
+  archiveWorkOrder,
   updateWorkOrder,
 } from '../services'
 import { workOrderSchema } from '../lib/validation'
@@ -137,6 +138,15 @@ export default function Ordenes() {
       toast.success('Orden reactivada')
     },
   })
+  const archiveMutation = useMutation({
+    mutationFn: archiveWorkOrder,
+    onSuccess: () => {
+      invalidate()
+      setModalOpen(false)
+      setEditing(null)
+      toast.success('Orden archivada')
+    },
+  })
 
   const { mutate: saveMutate, isPending, fieldErrors, resetErrors } = useFormMutation<WorkOrder, WorkOrderInput>({
     mutationFn: (payload) =>
@@ -236,40 +246,41 @@ export default function Ordenes() {
   }
 
   const columns: Column<WorkOrder>[] = [
-    { key: 'number', header: 'Código', align: 'center', render: (o) => <div className="text-center">{o.number}</div> },
+    { key: 'number', header: 'Código', align: 'center', className: 'hidden md:table-cell', render: (o) => o.number },
     {
       key: 'opened_at',
       header: 'Fecha',
       align: 'center',
-      render: (o) => <div className="text-center">{formatDate(o.opened_at)}</div>,
+      className: 'hidden sm:table-cell',
+      render: (o) => formatDate(o.opened_at),
     },
     {
       key: 'motor_vehicle_id',
       header: 'Vehículo',
       align: 'center',
-      render: (o) => <div className="text-center">{o.motor_vehicle?.plate ?? '—'}</div>,
+      render: (o) => o.motor_plate ?? o.motor_vehicle?.plate ?? '—',
     },
     {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
       align: 'center',
-      render: (o) => <div className="text-center">{o.trailer_vehicle?.plate ?? '—'}</div>,
+      render: (o) => o.trailer_plate ?? o.trailer_vehicle?.plate ?? '—',
     },
     {
       key: 'mileage',
       header: 'Kms',
-      align: 'center',
-      render: (o) => (
-        <div className="text-center">{o.mileage != null ? `${o.mileage.toLocaleString('es-ES')} km` : '—'}</div>
-      ),
+      align: 'right',
+      className: 'hidden md:table-cell',
+      render: (o) => (o.mileage != null ? o.mileage.toLocaleString('es-ES') : '—'),
     },
     {
       key: 'client_id',
       header: 'Cliente',
-      align: 'center',
+      align: 'left',
+      className: 'hidden sm:table-cell',
       render: (o) => o.client_name ?? `Cliente ${o.client_id}`,
     },
-    { key: 'description', header: 'Descripción' },
+    { key: 'description', header: 'Descripción', align: 'left' },
     {
       key: 'derived_status',
       header: 'Estado',
@@ -335,7 +346,7 @@ export default function Ordenes() {
                   <input type="hidden" name="client_id" value={editing.client_id} />
                   <label className={labelCls}>Cliente *</label>
                   <input
-                    value={`Cliente ${editing.client_id}`}
+                    value={editing.client_name ?? `Cliente ${editing.client_id}`}
                     disabled
                     className={`${inputCls} w-full opacity-70`}
                   />
@@ -543,6 +554,11 @@ export default function Ordenes() {
                 {can('work_orders.reactivate') && liveStatus === 'cancelada' && (
                   <button type="button" onClick={() => reactivateMutation.mutate(editing.id)} className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500">
                     Reactivar
+                  </button>
+                )}
+                {can('work_orders.archive') && liveOrder?.delivered_at && (
+                  <button type="button" onClick={() => archiveMutation.mutate(editing.id)} className="rounded border border-amber-300 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50">
+                    Archivar
                   </button>
                 )}
               </div>

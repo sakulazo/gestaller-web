@@ -49,8 +49,8 @@ export default function Servicios() {
   }, [categoriesQuery.data])
 
   const columns: Column<Service>[] = useMemo(() => [
-    { key: 'name', header: 'Nombre' },
-    { key: 'description', header: 'Descripción' },
+    { key: 'name', header: 'Nombre', align: 'left' },
+    { key: 'description', header: 'Descripción', align: 'left' },
     {
       key: 'category_id',
       header: 'Categoría',

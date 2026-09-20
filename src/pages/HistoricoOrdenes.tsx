@@ -1,15 +1,16 @@
 // Histórico de órdenes de trabajo facturadas, con el desenlace (completada/cancelada/entregada).
 // Un clic en un registro abre un modal con toda la información de la orden y sus items.
 
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
 import { btnGhost } from '../components/ui'
 import { useNavigate } from 'react-router-dom'
-import { listUsers, listWorkOrderHistory } from '../services'
+import { listWorkOrderHistory, unarchiveWorkOrder } from '../services'
 import { useAuth } from '../hooks/useAuth'
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
+import { useToast } from '../components/Toast'
 import type { WorkOrder } from '../types'
 
 const formatDate = (iso: string | null): string => {
@@ -53,6 +54,24 @@ function ExecutionBadge({ order }: { order: WorkOrder }) {
   return <span className="text-xs text-slate-400">—</span>
 }
 
+function ArchiveBadge({ order }: { order: WorkOrder }) {
+  if (!order.archived_at || order.invoiced_at) return null
+  return (
+    <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+      Archivada
+    </span>
+  )
+}
+
+function InvoiceBadge({ order }: { order: WorkOrder }) {
+  if (!order.invoiced_at) return null
+  return (
+    <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+      Facturada
+    </span>
+  )
+}
+
 function vehicleLabel(v: { plate: string; make: string; model: string | null } | null) {
   if (!v) return '—'
   return `${v.plate} — ${v.make} ${v.model ?? ''}`.trim()
@@ -69,15 +88,17 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 
 function OrderDetailModal({
   order,
-  userName,
   canInvoice,
+  canUnarchive,
   onInvoice,
+  onUnarchive,
   onClose,
 }: {
   order: WorkOrder | null
-  userName: (uid: number | null) => string
   canInvoice: boolean
+  canUnarchive: boolean
   onInvoice: (order: WorkOrder) => void
+  onUnarchive: (order: WorkOrder) => void
   onClose: () => void
 }) {
   if (!order) return null
@@ -112,15 +133,26 @@ function OrderDetailModal({
                 Facturada
               </span>
             ) : (
-              canInvoice && (
-                <button
-                  type="button"
-                  onClick={() => onInvoice(order)}
-                  className="mt-2 rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500"
-                >
-                  Facturar
-                </button>
-              )
+              <div className="mt-2 flex flex-col items-end gap-2">
+                {canUnarchive && (
+                  <button
+                    type="button"
+                    onClick={() => onUnarchive(order)}
+                    className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    Reactivar
+                  </button>
+                )}
+                {canInvoice && (
+                  <button
+                    type="button"
+                    onClick={() => onInvoice(order)}
+                    className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500"
+                  >
+                    Facturar
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -168,12 +200,12 @@ function OrderDetailModal({
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">Tipo</th>
-                    <th className="px-3 py-2 text-left font-medium">Concepto</th>
-                    <th className="px-3 py-2 text-left font-medium">Asignado a</th>
-                    <th className="px-3 py-2 text-left font-medium">Cant.</th>
-                    <th className="px-3 py-2 text-left font-medium">Tiempo (min)</th>
-                    <th className="px-3 py-2 text-left font-medium">Estado</th>
+                    <th className="px-3 py-2 text-center font-medium">Tipo</th>
+                    <th className="px-3 py-2 text-center font-medium">Concepto</th>
+                    <th className="px-3 py-2 text-center font-medium">Asignado a</th>
+                    <th className="px-3 py-2 text-center font-medium">Cant.</th>
+                    <th className="px-3 py-2 text-center font-medium">Tiempo (min)</th>
+                    <th className="px-3 py-2 text-center font-medium">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -183,7 +215,9 @@ function OrderDetailModal({
                         {it.item_type === 'service' ? 'Servicio' : 'Producto'}
                       </td>
                       <td className="px-3 py-2">{it.description || '—'}</td>
-                      <td className="px-3 py-2 text-slate-600">{userName(it.assigned_to)}</td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {it.assigned_user_name ?? it.assigned_user?.name ?? (it.assigned_to != null ? `Usuario ${it.assigned_to}` : '—')}
+                      </td>
                       <td className="px-3 py-2">{it.quantity}</td>
                       <td className="px-3 py-2">{it.duration_minutes != null ? `${it.duration_minutes} min` : '—'}</td>
                       <td className="px-3 py-2">
@@ -220,22 +254,22 @@ function OrderDetailModal({
 
 export default function HistoricoOrdenes() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const toast = useToast()
   const { can } = useAuth()
   const [selected, setSelected] = useState<WorkOrder | null>(null)
 
   const { items, total, page, totalPages, pageSize, setPage, isLoading } =
     usePaginatedQuery<WorkOrder>(['work-order-history'], listWorkOrderHistory)
-  const usersQuery = useQuery({
-    queryKey: ['users'],
-    queryFn: () => listUsers({ all: true }).then((r) => r.items),
-    enabled: can('users.view'),
-  })
 
-  const userName = useMemo(() => {
-    const m = new Map<number, string>()
-    for (const u of usersQuery.data ?? []) m.set(u.id, u.name)
-    return (uid: number | null) => (uid != null ? m.get(uid) ?? `Usuario ${uid}` : '—')
-  }, [usersQuery.data])
+  const unarchiveMutation = useMutation({
+    mutationFn: unarchiveWorkOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+      setSelected(null)
+      toast.success('Orden reactivada')
+    },
+  })
 
   const columns: Column<WorkOrder>[] = [
     { key: 'number', header: 'Código' },
@@ -247,22 +281,28 @@ export default function HistoricoOrdenes() {
     {
       key: 'motor_vehicle_id',
       header: 'Vehículo',
-      render: (o) => o.motor_vehicle?.plate ?? '—',
+      render: (o) => o.motor_plate ?? o.motor_vehicle?.plate ?? '—',
     },
     {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
-      render: (o) => o.trailer_vehicle?.plate ?? '—',
+      render: (o) => o.trailer_plate ?? o.trailer_vehicle?.plate ?? '—',
     },
     {
       key: 'invoiced_at',
-      header: 'Fecha de facturación',
-      render: (o) => formatDate(o.invoiced_at),
+      header: 'Fecha de cierre',
+      render: (o) => formatDate(o.invoiced_at ?? o.archived_at),
     },
     {
       key: 'execution',
       header: 'Ejecución',
-      render: (o) => <ExecutionBadge order={o} />,
+      render: (o) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ExecutionBadge order={o} />
+          <ArchiveBadge order={o} />
+          <InvoiceBadge order={o} />
+        </div>
+      ),
     },
   ]
 
@@ -289,9 +329,10 @@ export default function HistoricoOrdenes() {
 
       <OrderDetailModal
         order={selected}
-        userName={userName}
         canInvoice={can('invoices.create') && selected != null && !selected.cancelled_at && selected.invoiced_at == null}
+        canUnarchive={can('work_orders.archive') && selected != null && selected.archived_at != null && selected.invoiced_at == null && !(selected.cancelled_at && selected.delivered_at)}
         onInvoice={(o) => { setSelected(null); navigate('/invoices', { state: { workOrder: o } }) }}
+        onUnarchive={(o) => unarchiveMutation.mutate(o.id)}
         onClose={() => setSelected(null)}
       />
     </div>

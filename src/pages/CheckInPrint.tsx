@@ -4,9 +4,9 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getCompanyProfile, getWorkOrder, listClients } from '../services'
+import { getCompanyProfile, getWorkOrder } from '../services'
 import CarSilhouette from '../components/CarSilhouette'
-import type { Client, CompanyProfile, WorkOrder } from '../types'
+import type { CompanyProfile, WorkOrder } from '../types'
 import './check-in-print.css'
 
 function formatDate(iso: string | null | undefined): string {
@@ -29,7 +29,9 @@ function ClientAuthorizations({ label }: { label: string }) {
 }
 
 function VehicleSection({ workOrder }: { workOrder: WorkOrder }) {
-  const vehicle = workOrder.motor_vehicle
+  const make = workOrder.motor_make ?? workOrder.motor_vehicle?.make ?? ''
+  const model = workOrder.motor_model ?? workOrder.motor_vehicle?.model ?? ''
+  const plate = workOrder.motor_plate ?? workOrder.motor_vehicle?.plate ?? ''
   return (
     <article>
       <p><strong>DATOS DEL VEHÍCULO</strong></p>
@@ -38,19 +40,19 @@ function VehicleSection({ workOrder }: { workOrder: WorkOrder }) {
           <tr>
             <td colSpan={2} className="casilla">
               <p className="nombre-casilla">MARCA</p>
-              <p className="valor-casilla">{vehicle?.make ?? ''}</p>
+              <p className="valor-casilla">{make}</p>
             </td>
           </tr>
           <tr>
             <td colSpan={2} className="casilla">
               <p className="nombre-casilla">MODELO</p>
-              <p className="valor-casilla">{vehicle?.model ?? ''}</p>
+              <p className="valor-casilla">{model}</p>
             </td>
           </tr>
           <tr>
             <td colSpan={2} className="casilla">
               <p className="nombre-casilla">MATRÍCULA</p>
-              <p className="valor-casilla">{vehicle?.plate ?? ''}</p>
+              <p className="valor-casilla">{plate}</p>
             </td>
           </tr>
           <tr>
@@ -138,7 +140,16 @@ function CompanySection({ profile }: { profile: CompanyProfile | null }) {
   )
 }
 
-function ClientSection({ client }: { client: Client | undefined }) {
+function ClientSection({ workOrder }: { workOrder: WorkOrder }) {
+  const client = {
+    name: workOrder.client_name ?? '',
+    address: workOrder.client_address ?? '',
+    city: workOrder.client_city ?? '',
+    state: workOrder.client_state ?? '',
+    tax_id: workOrder.client_tax_id ?? '',
+    phone: workOrder.client_phone ?? '',
+    email: workOrder.client_email ?? '',
+  }
   return (
     <article>
       <p><strong>PROPIETARIO Y/O RESPONSABLE DEL VEHÍCULO</strong></p>
@@ -147,39 +158,39 @@ function ClientSection({ client }: { client: Client | undefined }) {
           <tr>
             <td colSpan={2} className="casilla">
               <p className="nombre-casilla">NOMBRE / RAZÓN SOCIAL</p>
-              <p className="valor-casilla">{client?.name ?? ''}</p>
+              <p className="valor-casilla">{client.name}</p>
             </td>
           </tr>
           <tr>
             <td colSpan={2} className="casilla">
               <p className="nombre-casilla">DIRECCIÓN</p>
-              <p className="valor-casilla">{client?.address ?? ''}</p>
+              <p className="valor-casilla">{client.address}</p>
             </td>
           </tr>
           <tr>
             <td className="casilla">
               <p className="nombre-casilla">POBLACIÓN</p>
-              <p className="valor-casilla">{client?.city ?? ''}</p>
+              <p className="valor-casilla">{client.city}</p>
             </td>
             <td className="casilla">
               <p className="nombre-casilla">PROVINCIA</p>
-              <p className="valor-casilla">{client?.state ?? ''}</p>
+              <p className="valor-casilla">{client.state}</p>
             </td>
           </tr>
           <tr>
             <td className="casilla">
               <p className="nombre-casilla">NIF / CIF</p>
-              <p className="valor-casilla">{client?.tax_id ?? ''}</p>
+              <p className="valor-casilla">{client.tax_id}</p>
             </td>
             <td className="casilla">
               <p className="nombre-casilla">TELÉFONO</p>
-              <p className="valor-casilla">{client?.phone ?? ''}</p>
+              <p className="valor-casilla">{client.phone}</p>
             </td>
           </tr>
           <tr>
             <td colSpan={2} className="casilla">
               <p className="nombre-casilla">CORREO ELECTRÓNICO</p>
-              <p className="valor-casilla">{client?.email ?? ''}</p>
+              <p className="valor-casilla">{client.email}</p>
             </td>
           </tr>
         </tbody>
@@ -197,12 +208,12 @@ function ServicesTable() {
         </colgroup>
         <thead>
           <tr>
-            <th>DESCRIPCIÓN SUCINTA DE LA REPARACIÓN Y/O SERVICIO A PRESTAR</th>
-            <th>UNIDADES/HORAS</th>
-            <th>P.V.P.</th>
-            <th>% DTO</th>
-            <th>% IVA</th>
-            <th>TOTAL</th>
+            <th className="text-center">DESCRIPCIÓN SUCINTA DE LA REPARACIÓN Y/O SERVICIO A PRESTAR</th>
+            <th className="text-center">UNIDADES/HORAS</th>
+            <th className="text-center">P.V.P.</th>
+            <th className="text-center">% DTO</th>
+            <th className="text-center">% IVA</th>
+            <th className="text-center">TOTAL</th>
           </tr>
         </thead>
         <tbody>
@@ -362,15 +373,10 @@ export default function CheckInPrint() {
     enabled: Number.isFinite(workOrderId) && workOrderId > 0,
   })
   const profileQuery = useQuery({ queryKey: ['company-profile'], queryFn: getCompanyProfile })
-  const clientsQuery = useQuery({
-    queryKey: ['clients'],
-    queryFn: () => listClients({ all: true }).then((r) => r.items),
-  })
 
   const workOrder = workOrderQuery.data
-  const client = clientsQuery.data?.find((c) => c.id === workOrder?.client_id)
 
-  const loading = workOrderQuery.isLoading || profileQuery.isLoading || clientsQuery.isLoading || !workOrder
+  const loading = workOrderQuery.isLoading || profileQuery.isLoading || !workOrder
 
   useEffect(() => {
     if (loading) return
@@ -404,7 +410,7 @@ export default function CheckInPrint() {
 
         <section className="identification">
           <CompanySection profile={profileQuery.data ?? null} />
-          <ClientSection client={client} />
+          <ClientSection workOrder={workOrder} />
           <VehicleSection workOrder={workOrder} />
         </section>
 

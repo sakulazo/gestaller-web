@@ -7,14 +7,15 @@ import { type ReactNode } from 'react'
 const alignCls = (align?: Column<unknown>['align']) =>
   align === 'right'
     ? 'text-right'
-    : align === 'center'
-      ? 'text-center'
-      : 'text-left'
+    : align === 'left'
+      ? 'text-left'
+      : 'text-center'
 
 export interface Column<T> {
   key: string
   header: string
   align?: 'left' | 'center' | 'right'
+  className?: string
   render?: (row: T) => ReactNode
 }
 
@@ -31,8 +32,6 @@ interface DataTableProps<T> {
   rows: T[]
   onRowClick?: (row: T) => void
   rowKey?: (row: T) => string | number
-  /** Alineación de los títulos de las cabeceras (por defecto, la de cada columna). */
-  headerAlign?: 'left' | 'center' | 'right'
   pagination?: TablePagination
 }
 
@@ -41,7 +40,6 @@ export default function DataTable<T>({
   rows,
   onRowClick,
   rowKey,
-  headerAlign,
   pagination,
 }: DataTableProps<T>) {
   const page = pagination?.page ?? 1
@@ -57,10 +55,7 @@ export default function DataTable<T>({
         <thead className="bg-slate-50 text-slate-600">
           <tr>
             {columns.map((c) => (
-              <th
-                key={c.key}
-                className={`px-4 py-2 font-medium uppercase ${alignCls(headerAlign ?? c.align)}`}
-              >
+              <th key={c.key} className={`px-4 py-2 text-center font-medium uppercase ${c.className ?? ''}`}>
                 {c.header}
               </th>
             ))}
@@ -74,7 +69,7 @@ export default function DataTable<T>({
               className={onRowClick ? 'cursor-pointer hover:bg-slate-50' : undefined}
             >
               {columns.map((c) => (
-                <td key={c.key} className={`px-4 py-2 ${alignCls(c.align)}`}>
+                <td key={c.key} className={`px-4 py-2 ${alignCls(c.align)} ${c.className ?? ''}`}>
                   {c.render
                     ? c.render(row)
                     : String((row as Record<string, unknown>)[c.key] ?? '')}

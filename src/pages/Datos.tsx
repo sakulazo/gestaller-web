@@ -100,7 +100,7 @@ function TableSection({ table }: { table: string }) {
                 <thead>
                   <tr className="border-b border-slate-200 text-xs font-medium text-slate-500">
                     {columns.map((col) => (
-                      <th key={col} className="whitespace-nowrap px-3 py-2 font-mono">
+                      <th key={col} className="whitespace-nowrap px-3 py-2 text-center font-mono">
                         {col}
                       </th>
                     ))}

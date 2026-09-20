@@ -16,12 +16,11 @@ import { clientSchema } from '../lib/validation'
 import type { Client, ClientInput } from '../types'
 
 const columns: Column<Client>[] = [
-  { key: 'name', header: 'Nombre/Razón social' },
-  { key: 'tax_id', header: 'NIF' },
+  { key: 'name', header: 'Nombre/Razón social', align: 'left' },
   { key: 'phone', header: 'Teléfono' },
-  { key: 'email', header: 'Email' },
-  { key: 'city', header: 'Ciudad' },
-  { key: 'state', header: 'Provincia' },
+  { key: 'email', header: 'Email', align: 'left' },
+  { key: 'city', header: 'Ciudad', align: 'left' },
+  { key: 'state', header: 'Provincia', align: 'left' },
 ]
 
 export default function Clientes() {

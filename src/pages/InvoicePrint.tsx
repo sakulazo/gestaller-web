@@ -1,14 +1,14 @@
 // Impresión de factura (documento A4; se imprime automáticamente y la
 // ventana se cierra tras el diálogo de impresión).
+//
+// Los datos de cliente, vehículo, empresa emisora e IVA se leen del snapshot
+// congelado en la propia factura; sólo si falta (facturas antiguas) se cae a
+// los datos vivos del maestro.
 
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import {
-  getCompanyProfile,
-  getInvoice,
-  listTaxRates,
-} from '../services'
+import { getCompanyProfile, getInvoice } from '../services'
 import './invoice-print.css'
 
 function formatDate(iso: string | null | undefined): string {
@@ -34,21 +34,10 @@ export default function InvoicePrint() {
     enabled: Number.isFinite(invoiceId) && invoiceId > 0,
   })
   const profileQuery = useQuery({ queryKey: ['company-profile'], queryFn: getCompanyProfile })
-  const taxRatesQuery = useQuery({
-    queryKey: ['tax-rates'],
-    queryFn: () => listTaxRates({ all: true }).then((r) => r.items),
-  })
 
   const invoice = invoiceQuery.data
 
-  const taxRateMap = useMemo(() => {
-    const m = new Map<number, number>()
-    for (const r of taxRatesQuery.data ?? []) m.set(r.id, Number(r.rate))
-    return m
-  }, [taxRatesQuery.data])
-
-  const loading =
-    invoiceQuery.isLoading || profileQuery.isLoading || taxRatesQuery.isLoading || !invoice
+  const loading = invoiceQuery.isLoading || profileQuery.isLoading || !invoice
 
   useEffect(() => {
     if (loading) return
@@ -67,18 +56,51 @@ export default function InvoicePrint() {
 
   const profile = profileQuery.data
 
+  const issuer = {
+    legal_name: invoice.issuer_legal_name ?? profile?.legal_name ?? '',
+    tax_id: invoice.issuer_tax_id ?? profile?.tax_id ?? '',
+    address: invoice.issuer_address ?? profile?.address ?? '',
+    city: invoice.issuer_city ?? profile?.city ?? '',
+    state: invoice.issuer_state ?? profile?.state ?? '',
+    postal_code: invoice.issuer_postal_code ?? profile?.postal_code ?? '',
+    phone: invoice.issuer_phone ?? profile?.phone ?? '',
+    email: invoice.issuer_email ?? profile?.email ?? '',
+  }
+
+  const client = {
+    name: invoice.client_name ?? invoice.client?.name ?? '',
+    tax_id: invoice.client_tax_id ?? invoice.client?.tax_id ?? '',
+    address: invoice.client_address ?? invoice.client?.address ?? '',
+    city: invoice.client_city ?? invoice.client?.city ?? '',
+    state: invoice.client_state ?? invoice.client?.state ?? '',
+    postal_code: invoice.client_postal_code ?? invoice.client?.postal_code ?? '',
+    phone: invoice.client_phone ?? invoice.client?.phone ?? '',
+    email: invoice.client_email ?? invoice.client?.email ?? '',
+  }
+
+  const motor = {
+    plate: invoice.motor_plate ?? invoice.motor_vehicle?.plate ?? '',
+    make: invoice.motor_make ?? invoice.motor_vehicle?.make ?? '',
+    model: invoice.motor_model ?? invoice.motor_vehicle?.model ?? null,
+  }
+
+  const trailer = {
+    plate: invoice.trailer_plate ?? invoice.trailer_vehicle?.plate ?? '',
+    make: invoice.trailer_make ?? invoice.trailer_vehicle?.make ?? '',
+    model: invoice.trailer_model ?? invoice.trailer_vehicle?.model ?? null,
+  }
+  const hasTrailer = Boolean(invoice.trailer_plate || invoice.trailer_vehicle)
+
   const taxGroups = Array.from(
     invoice.items.reduce((groups, it) => {
-      const key = it.tax_rate_id ?? null
+      const rate = it.tax_rate ?? null
+      const key = rate == null ? 'null' : String(rate)
       const line = it.quantity * it.unit_price * (1 - it.discount / 100)
-      const g = groups.get(key) ?? {
-        base: 0,
-        rate: key != null ? taxRateMap.get(key) : undefined,
-      }
+      const g = groups.get(key) ?? { base: 0, rate }
       g.base += line
       groups.set(key, g)
       return groups
-    }, new Map<number | null, { base: number; rate: number | undefined }>()),
+    }, new Map<string, { base: number; rate: number | null }>()),
   ).map(([key, g]) => ({
     key,
     base: g.base,
@@ -90,20 +112,20 @@ export default function InvoicePrint() {
     <main className="invoice-page">
       <header className="invoice-header">
         <div className="invoice-company">
-          <p className="invoice-company-name">{profile?.legal_name ?? ''}</p>
-          <p>NIF: {profile?.tax_id ?? ''}</p>
-          <p>{profile?.address ?? ''}</p>
+          <p className="invoice-company-name">{issuer.legal_name}</p>
+          <p>NIF: {issuer.tax_id}</p>
+          <p>{issuer.address}</p>
           <p>
             {[
-              profile?.city ? profile.city : null,
-              profile?.state ? `(${profile.state.toUpperCase()})` : null,
+              issuer.city ? issuer.city : null,
+              issuer.state ? `(${issuer.state.toUpperCase()})` : null,
             ]
               .filter(Boolean)
               .join(' ')}
-            {profile?.postal_code ? `, cp ${profile.postal_code}` : ''}
+            {issuer.postal_code ? `, cp ${issuer.postal_code}` : ''}
           </p>
-          {profile?.phone && <p>Tel: {profile.phone}</p>}
-          {profile?.email && <p>{profile.email}</p>}
+          {issuer.phone && <p>Tel: {issuer.phone}</p>}
+          {issuer.email && <p>{issuer.email}</p>}
         </div>
         <div className="invoice-meta">
           <h1>FACTURA</h1>
@@ -118,40 +140,34 @@ export default function InvoicePrint() {
       <section className="invoice-parties">
         <div>
           <p className="section-title">Datos del cliente</p>
-          <p><strong>{invoice.client.name}</strong></p>
-          {invoice.client.tax_id && <p>NIF: {invoice.client.tax_id}</p>}
-          <p>{invoice.client.address}</p>
+          <p><strong>{client.name}</strong></p>
+          {client.tax_id && <p>NIF: {client.tax_id}</p>}
+          <p>{client.address}</p>
           <p>
             {[
-              invoice.client.city ? invoice.client.city : null,
-              invoice.client.state ? `(${invoice.client.state.toUpperCase()})` : null,
+              client.city ? client.city : null,
+              client.state ? `(${client.state.toUpperCase()})` : null,
             ]
               .filter(Boolean)
               .join(' ')}
-            {invoice.client.postal_code ? `, cp ${invoice.client.postal_code}` : ''}
+            {client.postal_code ? `, cp ${client.postal_code}` : ''}
           </p>
-          {invoice.client.phone && <p>Tel: {invoice.client.phone}</p>}
-          {invoice.client.email && <p>{invoice.client.email}</p>}
+          {client.phone && <p>Tel: {client.phone}</p>}
+          {client.email && <p>{client.email}</p>}
         </div>
         <div>
           <p className="section-title">Vehículo</p>
-          <p><strong>{invoice.motor_vehicle?.plate ?? '—'}</strong></p>
-          {invoice.motor_vehicle?.make && (
-            <p>
-              {[invoice.motor_vehicle.make, invoice.motor_vehicle.model].filter(Boolean).join(' ')}
-            </p>
+          <p><strong>{motor.plate || '—'}</strong></p>
+          {motor.make && (
+            <p>{[motor.make, motor.model].filter(Boolean).join(' ')}</p>
           )}
           {invoice.mileage != null && <p>Kilometraje: {invoice.mileage.toLocaleString('es-ES')} km</p>}
-          {invoice.trailer_vehicle && (
+          {hasTrailer && (
             <>
               <p className="section-title" style={{ marginTop: 8 }}>Remolque</p>
-              <p><strong>{invoice.trailer_vehicle.plate}</strong></p>
-              {invoice.trailer_vehicle.make && (
-                <p>
-                  {[invoice.trailer_vehicle.make, invoice.trailer_vehicle.model]
-                    .filter(Boolean)
-                    .join(' ')}
-                </p>
+              <p><strong>{trailer.plate}</strong></p>
+              {trailer.make && (
+                <p>{[trailer.make, trailer.model].filter(Boolean).join(' ')}</p>
               )}
             </>
           )}
@@ -161,25 +177,24 @@ export default function InvoicePrint() {
       <table className="invoice-items">
         <thead>
           <tr>
-            <th className="col-desc">Descripción</th>
-            <th className="ta-right">Cant.</th>
-            <th className="ta-right">PVP</th>
-            <th className="ta-right">%DTO</th>
-            <th className="ta-right">IVA</th>
-            <th className="ta-right">Importe</th>
+            <th className="text-center">Descripción</th>
+            <th className="text-center">Cant.</th>
+            <th className="text-center">PVP</th>
+            <th className="text-center">%DTO</th>
+            <th className="text-center">IVA</th>
+            <th className="text-center">Importe</th>
           </tr>
         </thead>
         <tbody>
           {invoice.items.map((it, i) => {
             const line = it.quantity * it.unit_price * (1 - it.discount / 100)
-            const rate = it.tax_rate_id != null ? taxRateMap.get(it.tax_rate_id) : undefined
             return (
               <tr key={i}>
                 <td>{it.description ?? ''}</td>
                 <td className="ta-center">{it.quantity}</td>
                 <td className="ta-right">{formatNumber(it.unit_price)}</td>
                 <td className="ta-center">{it.discount ? `${it.discount} %` : '—'}</td>
-                <td className="ta-center">{rate != null ? `${rate}%` : '—'}</td>
+                <td className="ta-center">{it.tax_rate != null ? `${it.tax_rate}%` : '—'}</td>
                 <td className="ta-right">{formatNumber(line)} €</td>
               </tr>
             )
@@ -195,7 +210,7 @@ export default function InvoicePrint() {
               <td className="ta-right">{formatNumber(invoice.subtotal)} €</td>
             </tr>
             {taxGroups.map((g) => (
-              <tr key={g.key ?? 'sin-tasa'}>
+              <tr key={g.key}>
                 <td>
                   {g.rate != null
                     ? `IVA ${g.rate}% de ${formatNumber(g.base)}`
