@@ -109,6 +109,7 @@ export default function InvoicePrint() {
   }))
 
   return (
+    <div className="print-screen">
     <main className="invoice-page">
       <header className="invoice-header">
         <div className="invoice-company">
@@ -233,5 +234,6 @@ export default function InvoicePrint() {
         </p>
       )}
     </main>
+    </div>
   )
 }

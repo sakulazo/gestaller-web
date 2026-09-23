@@ -193,11 +193,29 @@ export default function Presupuestos() {
     {
       key: 'motor_vehicle_id',
       header: 'Vehículo a motor',
-      render: (p) => (p.motor_make ? `${p.motor_plate} — ${p.motor_make} ${p.motor_model ?? ''}`.trim() : p.motor_vehicle ? vehicleLabel(p.motor_vehicle) : '—'),
+      render: (p) => {
+        const motor = p.motor_make
+          ? `${p.motor_plate} — ${p.motor_make} ${p.motor_model ?? ''}`.trim()
+          : p.motor_vehicle
+            ? vehicleLabel(p.motor_vehicle)
+            : '—'
+        const trailer = p.trailer_make
+          ? `${p.trailer_plate} — ${p.trailer_make} ${p.trailer_model ?? ''}`.trim()
+          : p.trailer_vehicle
+            ? vehicleLabel(p.trailer_vehicle)
+            : p.trailer_plate ?? null
+        return (
+          <div>
+            <div>{motor}</div>
+            {trailer && <div className="text-xs font-normal text-slate-400 sm:hidden">{trailer}</div>}
+          </div>
+        )
+      },
     },
     {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
+      className: 'hidden sm:table-cell',
       render: (p) => (p.trailer_make ? `${p.trailer_plate} — ${p.trailer_make} ${p.trailer_model ?? ''}`.trim() : p.trailer_vehicle ? vehicleLabel(p.trailer_vehicle) : '—'),
     },
     {
@@ -234,7 +252,7 @@ export default function Presupuestos() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Presupuestos</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Presupuestos</h1>
         {can('quotes.create') && (
           <button onClick={openCreate} className={btnPrimary}>
             Nuevo presupuesto

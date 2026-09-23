@@ -59,7 +59,7 @@ export default function Settings() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Ajustes</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Ajustes</h1>
       </div>
 
       {isFetching ? (

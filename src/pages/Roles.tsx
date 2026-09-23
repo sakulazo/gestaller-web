@@ -24,8 +24,8 @@ import { roleSchema } from '../lib/validation'
 import type { Role, RoleInput } from '../types'
 
 const columns: Column<Role>[] = [
-  { key: 'name', header: 'Nombre' },
-  { key: 'description', header: 'Descripción' },
+  { key: 'name', header: 'Nombre', align: 'left' },
+  { key: 'description', header: 'Descripción', align: 'left' },
   {
     key: 'permission_codes',
     header: 'Permisos',
@@ -197,7 +197,7 @@ export default function Roles() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Roles</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Roles</h1>
         {can('roles.create') && (
           <button onClick={openCreate} className={btnPrimary}>
             Nuevo rol

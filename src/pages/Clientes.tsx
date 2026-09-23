@@ -104,7 +104,7 @@ export default function Clientes() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Clientes</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Clientes</h1>
         {can('clients.create') && (
           <button onClick={openCreate} className="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700 disabled:opacity-50">
             Nuevo cliente

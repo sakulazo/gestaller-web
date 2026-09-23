@@ -24,6 +24,7 @@ import Ordenes from './pages/Ordenes'
 import OrdenItems from './pages/OrdenItems'
 import HistoricoOrdenes from './pages/HistoricoOrdenes'
 import CheckInPrint from './pages/CheckInPrint'
+import CertificatePrint from './pages/CertificatePrint'
 import Presupuestos from './pages/Presupuestos'
 import Facturas from './pages/Facturas'
 import InvoicePrint from './pages/InvoicePrint'
@@ -113,6 +114,16 @@ export default function App() {
                     <ProtectedRoute>
                       <RequirePermission module="/work-orders">
                         <CheckInPrint />
+                      </RequirePermission>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/work-orders/:id/certificate"
+                  element={
+                    <ProtectedRoute>
+                      <RequirePermission module="/work-orders">
+                        <CertificatePrint />
                       </RequirePermission>
                     </ProtectedRoute>
                   }

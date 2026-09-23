@@ -54,7 +54,7 @@ export default function PerfilTaller() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold text-slate-800">Datos del taller</h1>
+      <h1 className="mb-1 text-page-title font-bold text-slate-800">Datos del taller</h1>
       <p className="mb-6 text-sm text-slate-500">
         Datos fiscales y de contacto del taller para su uso futuro en presupuestos y facturas.
       </p>

@@ -258,12 +258,22 @@ export default function Ordenes() {
       key: 'motor_vehicle_id',
       header: 'Vehículo',
       align: 'center',
-      render: (o) => o.motor_plate ?? o.motor_vehicle?.plate ?? '—',
+      render: (o) => {
+        const motor = o.motor_plate ?? o.motor_vehicle?.plate ?? '—'
+        const trailer = o.trailer_plate ?? o.trailer_vehicle?.plate ?? null
+        return (
+          <div>
+            <div>{motor}</div>
+            {trailer && <div className="text-xs font-normal text-slate-400 sm:hidden">{trailer}</div>}
+          </div>
+        )
+      },
     },
     {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
       align: 'center',
+      className: 'hidden sm:table-cell',
       render: (o) => o.trailer_plate ?? o.trailer_vehicle?.plate ?? '—',
     },
     {
@@ -303,7 +313,7 @@ export default function Ordenes() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Órdenes de trabajo</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Órdenes de trabajo</h1>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/work-orders/history')} className={btnGhost}>
             Histórico
@@ -515,25 +525,34 @@ export default function Ordenes() {
             </div>
           )}
 
-          <div className="flex justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             {editing && (
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 {can('work_orders.check_in') && liveStatus === 'abierta' && (
-                  <button type="button" onClick={() => checkInMutation.mutate(editing.id)} className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
+                  <button type="button" onClick={() => checkInMutation.mutate(editing.id)} className="w-full rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500 sm:w-auto">
                     Ingresar vehículo/s
                   </button>
                 )}
-                {can('work_orders.view') && liveOrder?.checked_in_at && (
+                {can('work_orders.view') && liveOrder?.checked_in_at && !liveOrder?.delivered_at && (
                   <button
                     type="button"
                     onClick={() => window.open(`/work-orders/${editing.id}/check-in`, '_blank')}
-                    className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="w-full rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:w-auto"
                   >
-                    Imprimir resguardo
+                    Registro entrada
+                  </button>
+                )}
+                {can('work_orders.view') && liveOrder?.delivered_at && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(`/work-orders/${editing.id}/certificate`, '_blank')}
+                    className="w-full rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:w-auto"
+                  >
+                    Certificado estancia
                   </button>
                 )}
                 {can('work_orders.deliver') && (liveStatus === 'completada' || liveStatus === 'cancelada') && (
-                  <button type="button" onClick={() => deliverMutation.mutate(editing.id)} className="rounded bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500">
+                  <button type="button" onClick={() => deliverMutation.mutate(editing.id)} className="w-full rounded bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500 sm:w-auto">
                     Entregar vehículo/s
                   </button>
                 )}
@@ -541,34 +560,34 @@ export default function Ordenes() {
                   <button
                     type="button"
                     onClick={() => setInvoiceModalOpen(true)}
-                    className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500"
+                    className="w-full rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 sm:w-auto"
                   >
                     Facturar
                   </button>
                 )}
                 {can('work_orders.cancel') && (liveStatus === 'abierta' || liveStatus === 'en_progreso') && (
-                  <button type="button" onClick={() => setCancelTarget(editing)} className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                  <button type="button" onClick={() => setCancelTarget(editing)} className="w-full rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 sm:w-auto">
                     Cancelar orden
                   </button>
                 )}
                 {can('work_orders.reactivate') && liveStatus === 'cancelada' && (
-                  <button type="button" onClick={() => reactivateMutation.mutate(editing.id)} className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500">
+                  <button type="button" onClick={() => reactivateMutation.mutate(editing.id)} className="w-full rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 sm:w-auto">
                     Reactivar
                   </button>
                 )}
                 {can('work_orders.archive') && liveOrder?.delivered_at && (
-                  <button type="button" onClick={() => archiveMutation.mutate(editing.id)} className="rounded border border-amber-300 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50">
+                  <button type="button" onClick={() => archiveMutation.mutate(editing.id)} className="w-full rounded border border-amber-300 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 sm:w-auto">
                     Archivar
                   </button>
                 )}
               </div>
             )}
-            <div className="ml-auto flex gap-2">
-              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+            <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
+              <button type="button" onClick={() => setModalOpen(false)} className={`${btnGhost} w-full sm:w-auto`}>
                 Cerrar
               </button>
               {!isReadOnly && (
-                <button type="submit" disabled={isPending} className={btnSuccess}>
+                <button type="submit" disabled={isPending} className={`${btnSuccess} w-full sm:w-auto`}>
                   {isPending ? 'Guardando…' : 'Guardar'}
                 </button>
               )}

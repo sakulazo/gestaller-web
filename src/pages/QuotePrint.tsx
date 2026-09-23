@@ -92,6 +92,7 @@ export default function QuotePrint() {
   const hasTrailer = Boolean(trailer.plate)
 
   return (
+    <div className="print-screen">
     <main className="invoice-page">
       <header className="invoice-header">
         <div className="invoice-company">
@@ -184,10 +185,6 @@ export default function QuotePrint() {
       <section className="invoice-totals">
         <table>
           <tbody>
-            <tr className="totals-strong">
-              <td>Subtotal</td>
-              <td className="ta-right">{formatNumber(quote.total)} €</td>
-            </tr>
             <tr className="totals-strong totals-final">
               <td>Total EUR</td>
               <td className="ta-right">{formatNumber(quote.total)} €</td>
@@ -207,5 +204,6 @@ export default function QuotePrint() {
         </p>
       )}
     </main>
+    </div>
   )
 }

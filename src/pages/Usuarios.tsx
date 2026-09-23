@@ -113,7 +113,7 @@ export default function Usuarios() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Usuarios</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Usuarios</h1>
         <div className="flex gap-2">
           {getPermissionsForRoute('/roles').some(can) && (
             <button onClick={() => navigate('/roles')} className={btnGhost}>

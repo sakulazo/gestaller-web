@@ -161,7 +161,7 @@ export default function Datos() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-slate-800">Datos</h1>
+      <h1 className="text-page-title-xl font-bold text-slate-800">Datos</h1>
       <input
         type="text"
         placeholder="Buscar tabla…"

@@ -4,7 +4,7 @@
 // Se usa tanto en página propia (/work-orders/:id/items) como embebido en un
 // modal apilado sobre el modal de la orden (embedded).
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -82,6 +82,112 @@ const toInput = (it: WorkOrderItem): ItemInput => ({
   tax_rate_id: null,
 })
 
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <span className="mb-1 block text-xs font-medium text-slate-500">{label}</span>
+      {children}
+    </div>
+  )
+}
+
+// Campos compartidos entre el editor en tabla (tablet/desktop) y la card
+// (móvil): concepto, asignado, cantidad y tiempo.
+function editorFields({
+  item,
+  services,
+  products,
+  users,
+  pickReference,
+  onChange,
+}: {
+  item: ItemInput
+  services?: Service[]
+  products?: Product[]
+  users?: User[]
+  pickReference: boolean
+  onChange: (patch: Partial<ItemInput>) => void
+}): { concept: ReactNode; assigned: ReactNode; quantity: ReactNode; time: ReactNode } {
+  const isService = item.item_type === 'service'
+  const options = isService ? services : products
+  const refValue = isService
+    ? item.service_id?.toString() ?? ''
+    : item.product_id?.toString() ?? ''
+
+  const selectRef = (v: string) => {
+    const id = v ? Number(v) : null
+    const found = (isService ? services : products)?.find((r) => r.id === id)
+    onChange({
+      [isService ? 'service_id' : 'product_id']: id,
+      description: found ? found.name : '',
+      unit_price: found ? Number(found.price) : 0,
+      duration_minutes:
+        isService && found ? Number((found as Service).duration_minutes ?? 0) || null : null,
+    })
+  }
+
+  const concept = pickReference ? (
+    <SearchSelect
+      required
+      placeholder={isService ? 'Selecciona servicio…' : 'Selecciona producto…'}
+      options={(options ?? []).map((r) => ({
+        value: String(r.id),
+        label: r.name,
+      }))}
+      value={refValue}
+      onChange={selectRef}
+    />
+  ) : (
+    <input
+      type="text"
+      className={`${inputCls} w-full`}
+      value={item.description ?? ''}
+      onChange={(e) => onChange({ description: e.target.value })}
+    />
+  )
+
+  const assigned = isService ? (
+    <SearchSelect
+      placeholder="Sin asignar"
+      options={(users ?? []).map((u) => ({
+        value: String(u.id),
+        label: u.name,
+      }))}
+      value={item.assigned_to?.toString() ?? ''}
+      onChange={(v) => onChange({ assigned_to: v ? Number(v) : null })}
+    />
+  ) : (
+    <span className="text-xs text-slate-400">—</span>
+  )
+
+  const quantity = (
+    <input
+      type="number"
+      min={1}
+      className={`${inputCls} w-full`}
+      value={item.quantity}
+      onChange={(e) => onChange({ quantity: Math.max(1, toNumber(e.target.value)) })}
+    />
+  )
+
+  const time = isService ? (
+    <input
+      type="number"
+      min={0}
+      className={`${inputCls} w-full`}
+      value={item.duration_minutes ?? ''}
+      placeholder="min"
+      onChange={(e) =>
+        onChange({ duration_minutes: e.target.value ? Math.max(0, toNumber(e.target.value)) : null })
+      }
+    />
+  ) : (
+    <span className="text-xs text-slate-400">—</span>
+  )
+
+  return { concept, assigned, quantity, time }
+}
+
 interface ItemRowEditorProps {
   item: ItemInput
   services?: Service[]
@@ -108,88 +214,25 @@ function ItemRowEditor({
   saveLabel = 'Guardar',
 }: ItemRowEditorProps) {
   const isService = item.item_type === 'service'
-  const options = isService ? services : products
-  const refValue = isService
-    ? item.service_id?.toString() ?? ''
-    : item.product_id?.toString() ?? ''
+  const { concept, assigned, quantity, time } = editorFields({
+    item,
+    services,
+    products,
+    users,
+    pickReference,
+    onChange,
+  })
   const refReady = isService ? item.service_id != null : item.product_id != null
-
-  const selectRef = (v: string) => {
-    const id = v ? Number(v) : null
-    const found = (isService ? services : products)?.find((r) => r.id === id)
-    onChange({
-      [isService ? 'service_id' : 'product_id']: id,
-      description: found ? found.name : '',
-      unit_price: found ? Number(found.price) : 0,
-      duration_minutes:
-        isService && found ? Number((found as Service).duration_minutes ?? 0) || null : null,
-    })
-  }
 
   return (
     <tr className="h-16 bg-slate-50">
       <td className="w-[4.5rem] px-2 py-3 text-center text-xs font-medium text-slate-500">
         {isService ? 'Servicio' : 'Producto'}
       </td>
-      <td className="w-[17rem] overflow-visible px-3 py-3">
-        {pickReference ? (
-          <SearchSelect
-            required
-            placeholder={isService ? 'Selecciona servicio…' : 'Selecciona producto…'}
-            options={(options ?? []).map((r) => ({
-              value: String(r.id),
-              label: r.name,
-            }))}
-            value={refValue}
-            onChange={selectRef}
-          />
-        ) : (
-          <input
-            type="text"
-            className={`${inputCls} w-full`}
-            value={item.description ?? ''}
-            onChange={(e) => onChange({ description: e.target.value })}
-          />
-        )}
-      </td>
-      <td className="w-40 overflow-visible px-3 py-3 text-center">
-        {isService ? (
-          <SearchSelect
-            placeholder="Sin asignar"
-            options={(users ?? []).map((u) => ({
-              value: String(u.id),
-              label: u.name,
-            }))}
-            value={item.assigned_to?.toString() ?? ''}
-            onChange={(v) => onChange({ assigned_to: v ? Number(v) : null })}
-          />
-        ) : (
-          <span className="text-xs text-slate-400">—</span>
-        )}
-      </td>
-      <td className="w-20 px-3 py-3 text-center">
-        <input
-          type="number"
-          min={1}
-          className={`${inputCls} w-full`}
-          value={item.quantity}
-          onChange={(e) => onChange({ quantity: Math.max(1, toNumber(e.target.value)) })}
-        />
-      </td>
-      <td className="w-24 px-3 py-3 text-center">
-        {isService ? (
-          <input
-            type="number"
-            min={0}
-            className={`${inputCls} w-full`}
-            value={item.duration_minutes ?? ''}
-            placeholder="min"
-            onChange={(e) => onChange({ duration_minutes: e.target.value ? Math.max(0, toNumber(e.target.value)) : null })}
-          />
-        ) : (
-          <span className="text-xs text-slate-400">—</span>
-        )}
-      </td>
+      <td className="w-[17rem] overflow-visible px-3 py-3">{concept}</td>
+      <td className="w-40 overflow-visible px-3 py-3 text-center">{assigned}</td>
+      <td className="w-20 px-3 py-3 text-center">{quantity}</td>
+      <td className="w-24 px-3 py-3 text-center">{time}</td>
       <td className="w-28 px-3 py-3 text-center text-xs text-slate-400">—</td>
       <td className="w-[13rem] px-3 py-3">
         <div className="flex justify-center gap-2">
@@ -211,6 +254,159 @@ function ItemRowEditor({
         </div>
       </td>
     </tr>
+  )
+}
+
+// Versión card (móvil) del editor de una línea, con los mismos campos que la
+// fila en tabla.
+function ItemCardEditor({
+  item,
+  services,
+  products,
+  users,
+  saving,
+  pickReference,
+  onChange,
+  onSave,
+  onCancel,
+  saveLabel = 'Guardar',
+}: ItemRowEditorProps) {
+  const isService = item.item_type === 'service'
+  const { concept, assigned, quantity, time } = editorFields({
+    item,
+    services,
+    products,
+    users,
+    pickReference,
+    onChange,
+  })
+  const refReady = isService ? item.service_id != null : item.product_id != null
+
+  return (
+    <div className="rounded border border-slate-300 bg-slate-50 p-3">
+      <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+        {isService ? 'Servicio' : 'Producto'}
+      </span>
+      <div className="mt-2">{concept}</div>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        <Field label="Asignado">{assigned}</Field>
+        <Field label="Cantidad">{quantity}</Field>
+        <Field label="Tiempo">{time}</Field>
+      </div>
+      <div className="mt-2 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving || (pickReference && !refReady)}
+          className="rounded bg-emerald-600 px-3 py-1 text-xs text-white hover:bg-emerald-500 disabled:opacity-50"
+        >
+          {saving ? 'Guardando…' : saveLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+interface LineActionsProps {
+  it: WorkOrderItem
+  canModify: boolean
+  canActOnItem: (it: WorkOrderItem) => boolean
+  canEditDoc: boolean
+  canDelete: boolean
+  canComplete: boolean
+  canCancel: boolean
+  onEdit: (it: WorkOrderItem) => void
+  onDelete: (it: WorkOrderItem) => void
+  onComplete: (id: number) => void
+  onCancelLine: (id: number) => void
+}
+
+function LineActions({
+  it,
+  canModify,
+  canActOnItem,
+  canEditDoc,
+  canDelete,
+  canComplete,
+  canCancel,
+  onEdit,
+  onDelete,
+  onComplete,
+  onCancelLine,
+}: LineActionsProps) {
+  if (!canModify || !canActOnItem(it)) return null
+  return (
+    <div className="flex flex-wrap justify-center gap-1">
+      {canEditDoc && (
+        <button type="button" onClick={() => onEdit(it)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50">
+          Editar
+        </button>
+      )}
+      {canDelete && (
+        <button type="button" onClick={() => onDelete(it)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50">
+          Quitar
+        </button>
+      )}
+      {it.item_type === 'service' &&
+        (it.derived_status === 'pendiente' || it.derived_status === 'asignado') &&
+        canComplete && (
+          <button type="button" onClick={() => onComplete(it.id)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-emerald-600 hover:bg-emerald-50">
+            Completar
+          </button>
+        )}
+      {it.item_type === 'service' &&
+        (it.derived_status === 'pendiente' || it.derived_status === 'asignado') &&
+        canCancel && (
+          <button type="button" onClick={() => onCancelLine(it.id)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-orange-600 hover:bg-orange-50">
+            Cancelar
+          </button>
+        )}
+    </div>
+  )
+}
+
+// Versión card (móvil) de una línea de solo lectura, con sus acciones.
+function ItemCard(props: LineActionsProps) {
+  const { it } = props
+  return (
+    <div className="rounded border border-slate-200 bg-white p-3">
+      <div className="flex items-center justify-between">
+        <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+          {it.item_type === 'service' ? 'Servicio' : 'Producto'}
+        </span>
+        <span
+          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+            itemStatusColors[it.derived_status] ?? 'bg-slate-100 text-slate-600'
+          }`}
+        >
+          {itemStatusLabels[it.derived_status] ?? it.derived_status}
+        </span>
+      </div>
+      <div className="mt-2 text-sm font-medium text-slate-700">{it.description || '—'}</div>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        <Field label="Asignado">
+          <span className="text-sm text-slate-700">
+            {it.assigned_user_name ?? it.assigned_user?.name ?? (it.assigned_to != null ? `Usuario ${it.assigned_to}` : '—')}
+          </span>
+        </Field>
+        <Field label="Cantidad">
+          <span className="text-sm text-slate-700">{it.quantity}</span>
+        </Field>
+        <Field label="Tiempo">
+          <span className="text-sm text-slate-700">{it.duration_minutes != null ? `${it.duration_minutes} min` : '—'}</span>
+        </Field>
+      </div>
+      <div className="mt-2 border-t border-slate-100 pt-2">
+        <LineActions {...props} />
+      </div>
+    </div>
   )
 }
 
@@ -378,7 +574,7 @@ export default function OrdenItems({
       <div className="mb-6 flex items-center justify-between">
         <div>
           {!embedded && (
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-page-title font-bold text-slate-800">
               Líneas de la orden {order.number}
             </h1>
           )}
@@ -417,7 +613,64 @@ export default function OrdenItems({
         </p>
       )}
 
-      <div className="overflow-visible rounded bg-white shadow">
+      <div className="animate-fade-in space-y-3 sm:hidden">
+        {items.map((it) =>
+          editingId === it.id && editing ? (
+            <ItemCardEditor
+              key={`edit-${it.id}`}
+              item={editing}
+              services={servicesQuery.data}
+              products={productsQuery.data}
+              users={usersQuery.data}
+              saving={editMutation.isPending}
+              pickReference={false}
+              onChange={(patch) => setEditing({ ...editing, ...patch })}
+              onSave={saveEdit}
+              onCancel={() => {
+                setEditingId(null)
+                setEditing(null)
+              }}
+            />
+          ) : (
+            <ItemCard
+              key={it.id}
+              it={it}
+              canModify={canModify}
+              canActOnItem={canActOnItem}
+              canEditDoc={canEditDoc}
+              canDelete={canDelete}
+              canComplete={canComplete}
+              canCancel={canCancel}
+              onEdit={startEdit}
+              onDelete={setDeleteTarget}
+              onComplete={(id) => completeMutation.mutate(id)}
+              onCancelLine={(id) => cancelMutation.mutate(id)}
+            />
+          ),
+        )}
+        {adding && (
+          <ItemCardEditor
+            key="new"
+            item={adding}
+            services={servicesQuery.data}
+            products={productsQuery.data}
+            users={usersQuery.data}
+            saving={createMutation.isPending}
+            pickReference
+            onChange={(patch) => setAdding({ ...adding, ...patch })}
+            onSave={saveNew}
+            onCancel={() => setAdding(null)}
+            saveLabel="Añadir"
+          />
+        )}
+        {items.length === 0 && !adding && (
+          <p className="rounded border border-slate-200 bg-white px-4 py-4 text-center text-sm text-slate-400">
+            Sin líneas de detalle
+          </p>
+        )}
+      </div>
+
+      <div className="overflow-visible rounded bg-white shadow hidden sm:block">
         <table className="min-w-full table-fixed text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
@@ -469,34 +722,19 @@ export default function OrdenItems({
                     </span>
                   </td>
                   <td className="w-[13rem] px-3 py-3">
-                    {canModify && canActOnItem(it) && (
-                      <div className="flex flex-wrap justify-center gap-1">
-                        {canEditDoc && (
-                          <button type="button" onClick={() => startEdit(it)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50">
-                            Editar
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button type="button" onClick={() => setDeleteTarget(it)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50">
-                            Quitar
-                          </button>
-                        )}
-                        {it.item_type === 'service' &&
-                          (it.derived_status === 'pendiente' || it.derived_status === 'asignado') &&
-                          canComplete && (
-                            <button type="button" onClick={() => completeMutation.mutate(it.id)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-emerald-600 hover:bg-emerald-50">
-                              Completar
-                            </button>
-                          )}
-                        {it.item_type === 'service' &&
-                          (it.derived_status === 'pendiente' || it.derived_status === 'asignado') &&
-                          canCancel && (
-                            <button type="button" onClick={() => cancelMutation.mutate(it.id)} className="whitespace-nowrap rounded border border-slate-300 px-2 py-0.5 text-xs text-orange-600 hover:bg-orange-50">
-                              Cancelar
-                            </button>
-                          )}
-                      </div>
-                    )}
+                    <LineActions
+                      it={it}
+                      canModify={canModify}
+                      canActOnItem={canActOnItem}
+                      canEditDoc={canEditDoc}
+                      canDelete={canDelete}
+                      canComplete={canComplete}
+                      canCancel={canCancel}
+                      onEdit={startEdit}
+                      onDelete={setDeleteTarget}
+                      onComplete={(id) => completeMutation.mutate(id)}
+                      onCancelLine={(id) => cancelMutation.mutate(id)}
+                    />
                   </td>
                 </tr>
               ),

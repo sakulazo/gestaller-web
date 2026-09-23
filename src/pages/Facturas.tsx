@@ -73,7 +73,7 @@ export default function Facturas() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Facturas</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Facturas</h1>
         {can('invoices.create') && (
           <button onClick={() => setModalOpen(true)} className={btnPrimary}>
             Nueva factura

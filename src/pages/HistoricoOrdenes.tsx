@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
-import { btnGhost } from '../components/ui'
+import { btnGhost, inputCls } from '../components/ui'
 import { useNavigate } from 'react-router-dom'
 import { listWorkOrderHistory, unarchiveWorkOrder } from '../services'
 import { useAuth } from '../hooks/useAuth'
@@ -259,7 +259,7 @@ export default function HistoricoOrdenes() {
   const { can } = useAuth()
   const [selected, setSelected] = useState<WorkOrder | null>(null)
 
-  const { items, total, page, totalPages, pageSize, setPage, isLoading } =
+  const { items, total, page, totalPages, pageSize, setPage, search, setSearch, isLoading } =
     usePaginatedQuery<WorkOrder>(['work-order-history'], listWorkOrderHistory)
 
   const unarchiveMutation = useMutation({
@@ -276,16 +276,27 @@ export default function HistoricoOrdenes() {
     {
       key: 'client_id',
       header: 'Cliente',
+      align: 'left',
       render: (o) => o.client_name ?? `Cliente ${o.client_id}`,
     },
     {
       key: 'motor_vehicle_id',
       header: 'Vehículo',
-      render: (o) => o.motor_plate ?? o.motor_vehicle?.plate ?? '—',
+      render: (o) => {
+        const motor = o.motor_plate ?? o.motor_vehicle?.plate ?? '—'
+        const trailer = o.trailer_plate ?? o.trailer_vehicle?.plate ?? null
+        return (
+          <div>
+            <div>{motor}</div>
+            {trailer && <div className="text-xs font-normal text-slate-400 sm:hidden">{trailer}</div>}
+          </div>
+        )
+      },
     },
     {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
+      className: 'hidden sm:table-cell',
       render: (o) => o.trailer_plate ?? o.trailer_vehicle?.plate ?? '—',
     },
     {
@@ -309,11 +320,18 @@ export default function HistoricoOrdenes() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Histórico de órdenes</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Histórico de órdenes</h1>
         <button type="button" onClick={() => navigate('/work-orders')} className={btnGhost}>
           Volver a órdenes
         </button>
       </div>
+
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar por matrícula o cliente…"
+        className={`${inputCls} mb-4 w-full max-w-sm`}
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>

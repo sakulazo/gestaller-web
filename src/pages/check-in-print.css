@@ -1,28 +1,17 @@
-:root {
+.page {
   --spacing-gap: 5px;
   --spacing-xs: 4px;
   --font-size-lg: 1.25rem;
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-
-h1,
-h2,
-p {
-  margin: 0px;
-}
-
-.ta-center {
+.page .ta-center {
   text-align: center;
 }
 
 @media screen {
-  body {
+  .print-screen {
     background: #e5e7eb;
+    min-height: 100vh;
   }
 
   .page {
@@ -62,20 +51,20 @@ p {
 }
 
 /* #region Título */
-header {
+.page header {
   display: grid;
   grid-template-columns: 7fr 3fr;
 }
 
-header h1 {
+.page header h1 {
   font-size: 26px;
 }
 
-header h2 {
+.page header h2 {
   font-size: 16px;
 }
 
-header > div:nth-child(2) {
+.page header > div:nth-child(2) {
   display: grid;
   grid-template-columns: 2fr 1fr;
   grid-template-rows: repeat(2, 1fr);
@@ -84,7 +73,7 @@ header > div:nth-child(2) {
   justify-items: center;
 }
 
-header p {
+.page header p {
   font-size: 12px;
 }
 /* #endregion */

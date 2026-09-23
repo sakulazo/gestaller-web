@@ -39,7 +39,7 @@ export default function Dashboard() {
   if (!hasCards && !hasActivity) {
     return (
       <div>
-        <h1 className="mb-6 text-2xl font-bold text-slate-800">Dashboard</h1>
+        <h1 className="mb-6 text-page-title font-bold text-slate-800">Dashboard</h1>
         <p className="text-slate-500">Sin permisos para mostrar indicadores</p>
       </div>
     )
@@ -47,7 +47,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-800">Dashboard</h1>
+      <h1 className="mb-6 text-page-title font-bold text-slate-800">Dashboard</h1>
 
       {hasCards && dashboard.isLoading && <p className="text-slate-500">Cargando…</p>}
       {hasCards && dashboard.isError && (

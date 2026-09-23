@@ -6,6 +6,10 @@
   --breakpoint-lg: 1536px;
   --animate-fade-in: fade-in 0.2s ease-out;
   --animate-scale-in: scale-in 0.2s ease-out;
+  --text-page-title: clamp(1rem, calc(0.773rem + 1.136vw), 1.5rem);
+  --text-page-title--line-height: calc(2 / 1.5);
+  --text-page-title-xl: clamp(0.833rem, calc(0.631rem + 0.947vw), 1.25rem);
+  --text-page-title-xl--line-height: calc(1.75 / 1.25);
 }
 
 @keyframes fade-in {

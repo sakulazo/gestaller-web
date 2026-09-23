@@ -1,0 +1,50 @@
+/* Estilos específicos del certificado de estancia (complementan invoice-print.css). */
+
+/* Más separación entre apartados que en la factura */
+.certificate-page {
+  gap: 32px;
+}
+
+.certificate-statement {
+  padding: 12px 16px;
+  border: 1px solid #000;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+.certificate-description {
+  padding-top: 8px;
+  border-top: 1px solid #999;
+  font-size: 11px;
+}
+
+.certificate-description p:last-child {
+  margin-top: 4px;
+}
+
+.certificate-signature {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: 32px;
+  font-size: 11px;
+}
+
+.certificate-signature-box {
+  flex: 1;
+}
+
+.signature-line {
+  margin-top: 4px;
+  border-bottom: 1px solid #000;
+  min-height: 48px;
+}
+
+.stamp-box {
+  margin-top: 4px;
+  border: 1px dashed #000;
+  border-radius: 6px;
+  min-height: 72px;
+}

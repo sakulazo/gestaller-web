@@ -110,7 +110,7 @@ export default function TaxRates() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Tasas de IVA</h1>
+        <h1 className="text-page-title font-bold text-slate-800">Tasas de IVA</h1>
         {can('tax_rates.create') && (
           <button onClick={openCreate} className={btnPrimary}>
             Nueva tasa

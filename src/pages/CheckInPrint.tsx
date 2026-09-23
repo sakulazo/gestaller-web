@@ -394,6 +394,7 @@ export default function CheckInPrint() {
   }
 
   return (
+    <div className="print-screen">
     <main className="page">
         <header>
           <div>
@@ -418,5 +419,6 @@ export default function CheckInPrint() {
         <ServicesTable />
         <SignatureSection />
       </main>
+    </div>
   )
 }

@@ -1,25 +1,15 @@
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-
-h1,
-p {
-  margin: 0;
-}
-
-.ta-right {
+.invoice-page .ta-right {
   text-align: right;
 }
 
-.ta-center {
+.invoice-page .ta-center {
   text-align: center;
 }
 
 @media screen {
-  body {
+  .print-screen {
     background: #e5e7eb;
+    min-height: 100vh;
   }
 
   .invoice-page {

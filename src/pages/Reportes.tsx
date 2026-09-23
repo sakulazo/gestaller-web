@@ -18,7 +18,7 @@ export default function Reportes() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-800">Reportes</h1>
+      <h1 className="mb-6 text-page-title font-bold text-slate-800">Reportes</h1>
 
       <h2 className="mb-3 text-lg font-semibold text-slate-700">
         Facturación mensual
