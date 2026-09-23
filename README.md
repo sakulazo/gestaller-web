@@ -1,37 +1,42 @@
 # Gestaller — Frontend
 
-SPA de la aplicación de gestión de lavaderos y talleres. Consume la API REST del backend (FastAPI) en su versión actual (`/api/clients`, `/api/work-orders`, `/api/quotes`, `/api/invoices`, `/api/products`, `/api/users`, `/api/roles`, ...) para clientes, vehículos, servicios, categorías, órdenes de trabajo, presupuestos, facturación, recambios, proveedores, usuarios, roles y reportes.
+SPA de la aplicación de gestión de lavaderos y talleres. Consume la API REST del backend (FastAPI): clientes, vehículos (con categorías), servicios, órdenes de trabajo, presupuestos, facturación, recambios, proveedores, usuarios/roles (RBAC), tasas de IVA, parámetros del sistema, perfil de taller y reportes.
 
 ## Stack
 
 - **React 18** — biblioteca de UI
 - **Vite** — bundler y servidor de desarrollo
 - **TypeScript** — tipado estático
-- **Tailwind CSS** — estilos
+- **Tailwind CSS 4** — estilos (configuración por CSS, sin `tailwind.config.ts`)
 - **pnpm** — gestor de paquetes
-- **React Router** — enrutado
-- **React Query** — gestión de estado del servidor (opcional/recomendado)
+- **React Router** — enrutado (v6)
+- **React Query** — estado del servidor (caché, refetch, `QueryCache.onError` global)
+- **Zod** — validación de formularios (UX)
+- **axios** — cliente HTTP con cola de refresh concurrente
+- **lucide-react** — iconos
 
 ## Estructura del proyecto
 
 ```
 frontend/
 ├── src/
-│   ├── components/   # Componentes reutilizables
-│   ├── pages/        # Páginas por módulo (login, clientes, ordenes, ...)
-│   ├── services/     # Cliente HTTP y llamadas a la API
-│   ├── hooks/        # Hooks personalizados
-│   ├── types/        # Tipos TypeScript compartidos
-│   ├── utils/        # Utilidades (formato, validación)
-│   ├── App.tsx       # Configuración de rutas
+│   ├── components/   # Componentes reutilizables (Modal, DataTable, ItemsForm, …)
+│   ├── pages/        # Páginas por módulo (incluye las de impresión: factura, presupuesto, resguardo, certificado)
+│   ├── services/     # Cliente HTTP (api.ts) y funciones por recurso (index.ts)
+│   ├── hooks/        # useAuth, usePaginatedQuery, useFormMutation, useMediaQuery
+│   ├── types/        # Tipos TypeScript compartidos con la API (incl. errors.ts)
+│   ├── permissions.ts# Plantillas de roles para la UI de roles
+│   ├── App.tsx       # Configuración de rutas y QueryClient
 │   ├── main.tsx      # Punto de entrada
-│   └── ...
+│   └── index.css     # Tailwind 4 (@theme) y tokens
 ├── index.html
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
 ├── docker-compose.dev.yml
-├── docs/               # Contrato de errores de la API (error-policy.md)
+├── docs/
+│   ├── SPECS.md           # Especificaciones de comportamiento de la SPA
+│   └── error-policy.md    # Contrato de errores (copia sincronizada del backend + comportamiento SPA)
 ├── .env.example
 └── ...
 ```
@@ -54,62 +59,38 @@ Levanta el contenedor `app` con Vite y hot-reload. Requiere el backend (repo `ge
 ### Opción B — Procesos locales
 
 ```bash
-# 1. Instalar dependencias
 pnpm install
-
-# 2. Configurar variables de entorno
-cp .env.example .env
-# VITE_API_URL=http://localhost:8000
-
-# 3. Arrancar el servidor de desarrollo
 pnpm dev
 ```
 
-La aplicación queda disponible en `http://localhost:5173`.
+La aplicación queda disponible en `http://localhost:5173`, con `/api/*` haciendo proxy a `http://localhost:8000` (sin problemas de CORS).
 
 ## Variables de entorno
 
 | Variable | Descripción | Ejemplo |
 | --- | --- | --- |
-| `VITE_API_URL` | URL base de la API del backend | `http://localhost:8000` |
+| `VITE_API_URL` | BaseURL del cliente HTTP (vacío ⇒ usa `VITE_API_URL` + `/api`, o el proxy de Vite en dev) | `http://localhost:8000` |
 | `VITE_DEV_PROXY_TARGET` | Destino del proxy `/api` en dev (solo Docker) | `http://api:8000` |
-
-## Proxy de desarrollo
-
-En desarrollo, Vite redirige las peticiones `/api/*` al backend mediante proxy, evitando problemas de CORS. El destino se configura con `VITE_DEV_PROXY_TARGET` (por defecto `http://localhost:8000`):
-
-```ts
-// vite.config.ts
-const proxyTarget = process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000'
-
-server: {
-  host: true,
-  proxy: {
-    '/api': {
-      target: proxyTarget,
-      changeOrigin: true,
-    },
-  },
-},
-```
 
 ## Scripts
 
 ```bash
 pnpm dev       # Servidor de desarrollo con recarga en caliente
-pnpm build     # Build de producción
-pnpm preview   # Previsualizar el build
-pnpm lint      # Lint de TypeScript/React
-pnpm test      # Tests (si se configuran)
+pnpm lint      # tsc --noEmit (verificación estática)
+pnpm build     # tsc && vite build
+pnpm preview   # Previsualizar el build de producción
 ```
+
+> No hay suite de tests: `pnpm lint` es la única verificación estática (pendiente añadir vitest/playwright).
 
 ## Conexión con la API
 
-- El cliente HTTP centraliza las llamadas a `VITE_API_URL` con prefijo `/api` (API v2, endpoints en inglés).
-- El token JWT se obtiene en el login y se envía en el header `Authorization: Bearer <token>`.
-- Ante respuestas `401`, el cliente redirige al login.
-- El estado del servidor se gestiona con React Query (caché, refetch y mutaciones).
-- Las operaciones de edición usan los `PUT` del backend; las acciones de negocio (`completar orden`, `convertir presupuesto`) usan los endpoints `POST .../complete` y `.../convert`.
+- Cliente HTTP único (`src/services/api.ts`): inyecta `Authorization: Bearer <token>`, `withCredentials: true` (cookie httpOnly del refresh).
+- Ante un 401, el interceptor intenta **un refresh** (cola concurrente para no duplicar peticiones) y reintenta; si falla, cierra sesión y redirige a `/login`.
+- Los errores se normalizan vía `toApplicationError` (`src/types/errors.ts`) y se gestionan por `code`, nunca por texto. Ver [Política de errores](./docs/error-policy.md).
+- `QueryCache.onError` global: todo fallo de query muestra toast (un fallo nunca parece una lista vacía).
+- Listados paginados server-side con envelope `Paginated<T>` (`{items, total, page, page_size}`) vía `listX(params?)` + hook `usePaginatedQuery`; los selects/dropdowns usan `{ all: true }`.
+- Acciones de negocio con los endpoints `POST` del backend (check-in, entregar, cancelar, reactivar, archivar, completar ítem, convertir presupuesto).
 
 ## Rutas principales
 
@@ -117,23 +98,35 @@ pnpm test      # Tests (si se configuran)
 | --- | --- |
 | `/login` | Autenticación |
 | `/` | Dashboard |
-| `/clients` | Gestión de clientes |
-| `/vehicles` | Gestión de vehículos |
-| `/vehicle-categories` | Categorías de vehículo |
-| `/services` | Catálogo de servicios |
-| `/service-categories` | Categorías de servicio |
+| `/clients`, `/vehicles`, `/vehicle-categories` | Clientes y vehículos |
+| `/services`, `/service-categories` | Catálogo de servicios |
 | `/work-orders` | Órdenes de trabajo |
+| `/work-orders/history` | Histórico de órdenes (búsqueda por matrícula/cliente) |
+| `/work-orders/:id/items` | Líneas de una orden |
 | `/quotes` | Presupuestos |
 | `/invoices` | Facturación |
-| `/products` | Catálogo de productos |
-| `/product-categories` | Categorías de producto |
-| `/providers` | Proveedores |
-| `/users` | Usuarios |
-| `/roles` | Roles y permisos (RBAC) |
-| `/reports` | Dashboard y reportes |
+| `/products`, `/product-categories`, `/providers` | Recambios |
+| `/users`, `/roles` | Usuarios y roles (RBAC) |
+| `/reports` | Reportes (facturación y actividad) |
+| `/company-profile` | Perfil de taller |
+| `/tax-rates` | Tasas de IVA |
+| `/settings` | Parámetros del sistema |
+| `/data` | Vista de datos crudos (dev) |
+| `/work-orders/:id/check-in` | Resguardo de deposito (impresión A5) |
+| `/work-orders/:id/certificate` | Certificado de estancia del vehículo |
+| `/invoices/:id/print`, `/quotes/:id/print` | Impresión A4 de factura y presupuesto |
+
+Las URLs antiguas en español (`/clientes`, `/ordenes`, …) redirigen a sus equivalentes en inglés.
+
+## Responsive
+
+Layout mobile-first con header superior y nav horizontal por secciones (Taller, Comercial, Catálogo, Administración). En móvil (<768px) el nav es un drawer ☰ con acordeón; las tablas de ítems pasan a cards. Breakpoints propios en `src/index.css` (`@theme`): base (0–767px), `sm:` (≥768px), `md:` (≥1024px).
 
 ## Convenciones
 
 - Componentes en `src/components`, páginas en `src/pages`.
 - Tipos de dominio en `src/types` compartidos con la API.
+- Validación UI con Zod; la autoridad es la API.
+- Identificadores y nombres en inglés; mensajes visibles al usuario en español.
 - No se versionan secretos: solo `.env.example`.
+- Errores de API según [Política de errores](./docs/error-policy.md).

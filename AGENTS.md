@@ -2,8 +2,8 @@
 
 SPA de gestión de lavaderos y talleres: clientes, vehículos, servicios, órdenes de trabajo, presupuestos, facturación, recambios y proveedores, con usuarios/roles/permisos (RBAC), dashboard y reportes.
 
-- **Stack**: React 18, Vite, TypeScript, Tailwind CSS 4, React Query, Zod.
-- **Repo hermano**: `gestaller-api` (backend FastAPI). El contrato entre ambos es la API + `docs/error-policy.md`.
+- **Stack**: React 18, Vite, TypeScript, Tailwind CSS 4, React Query, Zod, axios, lucide-react.
+- **Repo hermano**: `gestaller-api` (backend FastAPI). El contrato entre ambos es la API + [`docs/error-policy.md`](./docs/error-policy.md) (copia sincronizada del backend).
 
 ## Comandos
 
@@ -25,8 +25,8 @@ docker compose -f docker-compose.dev.yml up --build
 
 ## Arquitectura
 
-- `src/pages/` — una página por módulo (18 + NotFound, incluye `Settings` en `/settings`).
-- `src/components/` — Modal, DataTable, ItemsForm, CategoryManager.
+- `src/pages/` — 27 páginas importadas en `App.tsx`: una por módulo (incluye `Settings` en `/settings`, `TaxRates`, `PerfilTaller`, `HistoricoOrdenes`) + 4 de impresión (factura, presupuesto, resguardo, certificado) + Login, Dashboard y NotFound.
+- `src/components/` — Modal, DataTable, ItemsForm, CategoryManager, ConfirmDialog, SearchSelect, RequirePermission/ProtectedRoute, Toast, Form, Checkbox, ErrorBoundary, CarSilhouette.
 - `src/hooks/useAuth.tsx` — token en localStorage, refresh token en cookie httpOnly (`/api/auth`), catálogo de permisos y `catalogReady`.
 - `src/hooks/usePaginatedQuery.ts` — listados paginados server-side (page + search con debounce; `queryKey` comparte prefijo con el modo `all` para que `invalidateQueries` invalide ambos).
 - `src/services/api.ts` — axios con cola de refresh concurrente al 401 y toasts de error.
@@ -46,7 +46,7 @@ docker compose -f docker-compose.dev.yml up --build
 ## Gotchas conocidos
 
 - Sin tests de frontend todavía (`pnpm lint` es la única verificación estática).
-- Búsqueda/filtrado server-side con el param `search` **solo en Clientes y Vehículos**; en el resto de listados el backend lo ignora (devuelven todo paginado por `page`/`page_size`).
+- Búsqueda/filtrado server-side con el param `search` **solo en Clientes, Vehículos e Histórico de órdenes**; en el resto de listados el backend lo ignora (devuelven todo paginado por `page`/`page_size`).
 - `tailwind.config.ts` no existe: Tailwind 4 se configura por CSS (`@import "tailwindcss"`).
 
 ## Responsive (3 tamaños)
@@ -59,8 +59,8 @@ Breakpoints propios definidos en `src/index.css` (`@theme`), mobile-first:
 | Tablet | 768 – 1023px | `sm:` |
 | Desktop | ≥ 1024px | `md:` (`lg:` reservado en 1536px) |
 
-El layout (`src/components/Layout.tsx`) presenta el menú según el tamaño:
+El layout (`src/components/Layout.tsx`) usa un único menú en todos los tamaños:
 
-- **Mobile (<768px)**: barra top con botón ☰ que abre un drawer deslizante con el acordeón de navegación.
-- **Tablet (768–1023px)**: header de 2 filas — barra de marca (usuario y "Cerrar sesión" a la derecha) y debajo el nav inline con scroll horizontal agrupado por secciones.
-- **Desktop (≥1024px)**: sidebar lateral fijo a la izquierda.
+- Barra de marca superior (marca "Gestaller", usuario y "Cerrar sesión") siempre visible.
+- Debajo, el **nav horizontal** agrupado por secciones (Taller, Comercial, Catálogo, Administración), con dropdowns por sección, siempre visible en cualquier tamaño.
+- **Mobile (<768px)**: además, botón ☰ en la barra de marca que abre un drawer deslizante con el acordeón de navegación completo. En tablet/desktop el ☰ está oculto (`sm:hidden`).

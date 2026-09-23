@@ -8,6 +8,8 @@ Stack: React 18, TypeScript, Vite, Tailwind CSS 4, React Query, Zod, axios.
 
 ## 1. Contrato de errores de la API
 
+> Contrato canónico: [`docs/error-policy.md`](./error-policy.md) (copia sincronizada del backend + comportamiento en la SPA). Esta sección lo resume para mantener el documento autocontenido.
+
 ### 1.1 Formato
 
 Toda respuesta de error de la API sigue este formato y la aplicación **se basa en los códigos y datos estructurados**, nunca en comparar textos de mensajes:
