@@ -20,6 +20,9 @@ RUN pnpm build
 
 FROM caddy:2-alpine AS final
 
+# curl para el healthcheck del compose (el script del contenedor Caddy todo-arranca service_ready).
+RUN apk add --no-cache curl
+
 # Raíz web servida por Caddy (ver Caddyfile).
 WORKDIR /srv
 COPY --from=build /app/dist .

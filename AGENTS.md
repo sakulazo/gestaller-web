@@ -20,11 +20,12 @@ Con Docker (requiere el backend levantado; ambos composes comparten la red `gest
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-Producción (SPA compilada servida por Caddy con reverse proxy `/api` → `api:8000`;
-red `gestaller-prod`; App en `127.0.0.1:${CADDY_PORT:-8080}`).
+Producción (SPA compilada servida por Caddy en el VPS con `PUBLIC_HOST` obligatorio,
+Let's Encrypt automático; reverse proxy `/api` → `api:8000`; red `gestaller-prod`;
+publica :80 y :443). Orquestado por `../prod.sh`.
 
 ```bash
-docker compose -f docker-compose.prod.yml up --build   # orquestado por ../prod.sh
+docker compose --env-file ../.env -f docker-compose.prod.yml up --build
 ```
 
 - El proxy de desarrollo apunta a `VITE_DEV_PROXY_TARGET` (por defecto `http://localhost:8000`; en Docker lo fija el compose a `http://api:8000`).
