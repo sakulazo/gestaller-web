@@ -1,0 +1,19 @@
+# Gestaller — Caddyfile de producción.
+#
+# Sirve la SPA compilada y hace de reverse proxy de /api hacia el backend
+# (nombre de servicio `api` en la red Docker compartida gestaller-prod).
+#
+# Sitio: por defecto ":80" (http en local/WSL). Con un dominio público, define
+# PUBLIC_HOST (p. ej. gestaller.example.com) y Caddy emitirá Let's Encrypt
+# automáticamente (HTTPS).
+{$PUBLIC_HOST} {
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

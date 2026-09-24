@@ -1,0 +1,38 @@
+# Entorno de producción del frontend gestaller (SPA servida por Caddy).
+#
+# Uso (desde la raíz del workspace, vía prod.sh o manual):
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Requiere que el backend (repo gestaller-api) esté levantado con su
+# docker-compose.prod.yml: ambos comparten la red Docker "gestaller-prod" y
+# Caddy resuelve la API por su nombre de servicio (http://api:8000).
+#
+# La app se publica en 127.0.0.1:${CADDY_PORT:-8080} (solo localhost por
+# defecto; en un servidor expón :80/:443 y define PUBLIC_HOST con tu dominio).
+#
+# La SPA se compila con VITE_API_URL vacío ⇒ usa /api same-origin:
+# Caddy reenvía /api/* al backend.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: gestaller-prod-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CADDY_PORT:-8080}:80"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:-:80}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - gestaller-prod
+
+networks:
+  gestaller-prod:
+    external: true
+    name: gestaller-prod

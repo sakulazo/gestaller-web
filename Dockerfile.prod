@@ -1,0 +1,30 @@
+# Imagen de producción del frontend gestaller (React/Vite).
+# Multi-stage: construye el bundle estático y lo sirve con Caddy
+# (reverse proxy /api → backend por su nombre de servicio en la red gestaller-prod).
+#
+# Nota: el Dockerfile original (sin sufijo) sigue sirviendo para
+# 'docker build --output type=local' (vuelco de dist/ a un directorio del host).
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+# pnpm 11.18.0 (lockfile v9)
+RUN npm install -g pnpm@11.18.0
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+# VITE_API_URL vacío ⇒ el cliente usa /api same-origin (Caddy proxyea al backend).
+RUN pnpm build
+
+FROM caddy:2-alpine AS final
+
+# Raíz web servida por Caddy (ver Caddyfile).
+WORKDIR /srv
+COPY --from=build /app/dist .
+COPY Caddyfile /etc/caddy/Caddyfile
+
+EXPOSE 80
+
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

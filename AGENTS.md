@@ -20,12 +20,19 @@ Con Docker (requiere el backend levantado; ambos composes comparten la red `gest
 docker compose -f docker-compose.dev.yml up --build
 ```
 
+Producción (SPA compilada servida por Caddy con reverse proxy `/api` → `api:8000`;
+red `gestaller-prod`; App en `127.0.0.1:${CADDY_PORT:-8080}`).
+
+```bash
+docker compose -f docker-compose.prod.yml up --build   # orquestado por ../prod.sh
+```
+
 - El proxy de desarrollo apunta a `VITE_DEV_PROXY_TARGET` (por defecto `http://localhost:8000`; en Docker lo fija el compose a `http://api:8000`).
 - Credenciales seed (las siembra el backend): **admin / admin123**.
 
 ## Arquitectura
 
-- `src/pages/` — 27 páginas importadas en `App.tsx`: una por módulo (incluye `Settings` en `/settings`, `TaxRates`, `PerfilTaller`, `HistoricoOrdenes`) + 4 de impresión (factura, presupuesto, resguardo, certificado) + Login, Dashboard y NotFound.
+- `src/pages/` — 26 páginas importadas en `App.tsx`: una por módulo (incluye `Settings` en `/settings`, `TaxRates`, `PerfilTaller`, `HistoricoOrdenes`) + 4 de impresión (factura, presupuesto, resguardo, certificado) + Login, Dashboard y NotFound.
 - `src/components/` — Modal, DataTable, ItemsForm, CategoryManager, ConfirmDialog, SearchSelect, RequirePermission/ProtectedRoute, Toast, Form, Checkbox, ErrorBoundary, CarSilhouette.
 - `src/hooks/useAuth.tsx` — token en localStorage, refresh token en cookie httpOnly (`/api/auth`), catálogo de permisos y `catalogReady`.
 - `src/hooks/usePaginatedQuery.ts` — listados paginados server-side (page + search con debounce; `queryKey` comparte prefijo con el modo `all` para que `invalidateQueries` invalide ambos).
