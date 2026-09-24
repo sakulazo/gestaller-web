@@ -200,7 +200,7 @@ Estados mostrados: `pendiente`, `asignado`, `completado`, `cancelado`, `producto
 
 ## 11. Arquitectura y convenciones
 
-- `src/pages/` — una página por módulo (+ `NotFound`, `SinAcceso`, `Datos` de desarrollo).
+- `src/pages/` — una página por módulo (+ `NotFound`, `SinAcceso`).
 - `src/components/` — `DataTable` (con `onRowClick`, `canDelete` por fila), `Modal`, `ConfirmDialog`, `ItemsForm`, `CategoryManager`, `SearchSelect`, `Checkbox`, `Toast`, `Form`, `ui.ts` (estilos compartidos).
 - `src/services/` — capa de servicios tipada por recurso; todas las rutas que consume existen en la API.
 - Identificadores y nombres en inglés; mensajes visibles al usuario en español.

@@ -35,7 +35,6 @@ import Proveedores from './pages/Proveedores'
 import Usuarios from './pages/Usuarios'
 import Roles from './pages/Roles'
 import Reportes from './pages/Reportes'
-import Datos from './pages/Datos'
 import PerfilTaller from './pages/PerfilTaller'
 import TaxRates from './pages/TaxRates'
 import Settings from './pages/Settings'
@@ -92,7 +91,6 @@ export default function App() {
                   <Route path="/company-profile" element={<RequirePermission module="/company-profile"><PerfilTaller /></RequirePermission>} />
                   <Route path="/tax-rates" element={<RequirePermission module="/tax-rates"><TaxRates /></RequirePermission>} />
                   <Route path="/settings" element={<RequirePermission module="/settings"><Settings /></RequirePermission>} />
-                  <Route path="/data" element={<RequirePermission module="/data"><Datos /></RequirePermission>} />
                   <Route path="/clientes" element={<Navigate to="/clients" replace />} />
                   <Route path="/vehiculos" element={<Navigate to="/vehicles" replace />} />
                   <Route path="/categorias-vehiculo" element={<Navigate to="/vehicle-categories" replace />} />

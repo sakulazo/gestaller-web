@@ -111,7 +111,6 @@ pnpm preview   # Previsualizar el build de producción
 | `/company-profile` | Perfil de taller |
 | `/tax-rates` | Tasas de IVA |
 | `/settings` | Parámetros del sistema |
-| `/data` | Vista de datos crudos (dev) |
 | `/work-orders/:id/check-in` | Resguardo de deposito (impresión A5) |
 | `/work-orders/:id/certificate` | Certificado de estancia del vehículo |
 | `/invoices/:id/print`, `/quotes/:id/print` | Impresión A4 de factura y presupuesto |

@@ -51,7 +51,6 @@ const navSections: NavSection[] = [
       { to: '/tax-rates', label: 'Tasas de IVA' },
       { to: '/settings', label: 'Ajustes' },
       { to: '/reports', label: 'Reportes' },
-      { to: '/data', label: 'Datos' },
     ],
   },
 ]

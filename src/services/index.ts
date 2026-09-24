@@ -302,10 +302,6 @@ export const getMonthlyBilling = (): Promise<MonthlyBilling[]> =>
 export const getActivity = (): Promise<ActivityReport[]> =>
   api.get<ActivityReport[]>('/reports/activity').then((r) => r.data)
 
-// Datos crudos (solo lectura para la página /data, incluye soft-deleted)
-export const fetchTableData = (table: string): Promise<Record<string, unknown>[]> =>
-  api.get<Record<string, unknown>[]>(`/data/${table}`).then((r) => r.data)
-
 // Legacy endpoints para otras partes de la app (sin deleted)
 export const listQuoteItems = (): Promise<QuoteItem[]> =>
   api.get<QuoteItem[]>('/quote-items').then((r) => r.data)
