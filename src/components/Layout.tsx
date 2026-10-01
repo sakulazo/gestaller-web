@@ -2,55 +2,86 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { ChevronDown, ChevronUp, LogOut, Menu, X } from 'lucide-react'
+import {
+  Building,
+  Boxes,
+  Car,
+  ChartColumn,
+  ChevronDown,
+  ChevronUp,
+  ClipboardList,
+  FileText,
+  Hammer,
+  HandCoins,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Package,
+  Percent,
+  ReceiptEuro,
+  Settings,
+  ShieldCheck,
+  Truck,
+  UserCog,
+  Users,
+  Wrench,
+  X,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 
 interface NavItem {
   to: string
   label: string
   end?: boolean
+  icon: LucideIcon
 }
 
 interface NavSection {
   title?: string
+  icon?: LucideIcon
   items: NavItem[]
 }
 
 const navSections: NavSection[] = [
   {
-    items: [{ to: '/', label: 'Dashboard', end: true }],
+    items: [{ to: '/', label: 'Dashboard', end: true, icon: LayoutDashboard }],
   },
   {
     title: 'Taller',
+    icon: Hammer,
     items: [
-      { to: '/work-orders', label: 'Órdenes de trabajo' },
-      { to: '/clients', label: 'Clientes' },
-      { to: '/vehicles', label: 'Vehículos' },
+      { to: '/work-orders', label: 'Órdenes de trabajo', icon: ClipboardList },
+      { to: '/clients', label: 'Clientes', icon: Users },
+      { to: '/vehicles', label: 'Vehículos', icon: Car },
     ],
   },
   {
     title: 'Comercial',
+    icon: HandCoins,
     items: [
-      { to: '/quotes', label: 'Presupuestos' },
-      { to: '/invoices', label: 'Facturas' },
-      { to: '/providers', label: 'Proveedores' },
+      { to: '/quotes', label: 'Presupuestos', icon: FileText },
+      { to: '/invoices', label: 'Facturas', icon: ReceiptEuro },
+      { to: '/providers', label: 'Proveedores', icon: Truck },
     ],
   },
   {
     title: 'Catálogo',
+    icon: Boxes,
     items: [
-      { to: '/services', label: 'Servicios' },
-      { to: '/products', label: 'Productos' },
+      { to: '/services', label: 'Servicios', icon: Wrench },
+      { to: '/products', label: 'Productos', icon: Package },
     ],
   },
   {
     title: 'Administración',
+    icon: ShieldCheck,
     items: [
-      { to: '/users', label: 'Usuarios' },
-      { to: '/company-profile', label: 'Datos del taller' },
-      { to: '/tax-rates', label: 'Tasas de IVA' },
-      { to: '/settings', label: 'Ajustes' },
-      { to: '/reports', label: 'Reportes' },
+      { to: '/users', label: 'Usuarios', icon: UserCog },
+      { to: '/company-profile', label: 'Datos del taller', icon: Building },
+      { to: '/tax-rates', label: 'Tasas de IVA', icon: Percent },
+      { to: '/settings', label: 'Ajustes', icon: Settings },
+      { to: '/reports', label: 'Reportes', icon: ChartColumn },
     ],
   },
 ]
@@ -100,7 +131,7 @@ export default function Layout() {
     .filter((section) => section.items.length > 0)
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `block rounded px-3 py-2 text-sm ${
+    `flex items-center gap-3 rounded px-3 py-2 text-sm ${
       isActive ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800'
     }`
 
@@ -117,7 +148,8 @@ export default function Layout() {
           setOpenSections([])
         }}
       >
-        {item.label}
+        <item.icon className="h-4 w-4 shrink-0 opacity-70" />
+        <span className="truncate">{item.label}</span>
       </NavLink>
     ))
 
@@ -130,9 +162,15 @@ export default function Layout() {
             {section.title ? (
               <button
                 onClick={() => toggleSection(section.title!)}
+                aria-expanded={open}
                 className="flex w-full items-center justify-between rounded px-3 pb-1 pt-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300"
               >
-                {section.title}
+                <span className="flex items-center gap-3">
+                  {section.icon && (
+                    <section.icon className="h-4 w-4 shrink-0 opacity-70" />
+                  )}
+                  {section.title}
+                </span>
                 <span className="text-slate-600">{open ? '−' : '+'}</span>
               </button>
             ) : null}
@@ -175,51 +213,60 @@ export default function Layout() {
         className="relative hidden border-t border-slate-800 bg-slate-900 text-slate-100 sm:block"
       >
         <div className="flex flex-wrap items-center gap-1 px-3 py-2">
-          {visibleSections.map((section) =>
-            section.title ? (
-              <div key={section.title} className="relative">
-                <button
-                  onClick={() => toggleTabletSection(section.title!)}
-                  aria-expanded={tabletOpen === section.title}
-                  className={`flex shrink-0 items-center gap-1 rounded px-3 py-2 text-sm ${
-                    tabletOpen === section.title
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  {section.title}
-                  <span className="text-slate-500">
-                    {tabletOpen === section.title ? (
-                      <ChevronUp className="h-3 w-3" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3" />
+          {visibleSections.map((section) => {
+            if (section.title) {
+              return (
+                <div key={section.title} className="relative">
+                  <button
+                    onClick={() => toggleTabletSection(section.title!)}
+                    aria-expanded={tabletOpen === section.title}
+                    className={`flex shrink-0 items-center gap-2 rounded px-3 py-2 text-sm ${
+                      tabletOpen === section.title
+                        ? 'bg-slate-800 text-white'
+                        : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    {section.icon && (
+                      <section.icon className="h-4 w-4 shrink-0 opacity-70" />
                     )}
-                  </span>
-                </button>
-                {tabletOpen === section.title && (
-                  <div className="absolute left-0 top-full z-10 mt-1 w-max min-w-48 rounded-md border border-slate-700 bg-slate-900 py-2 shadow-xl">
-                    {renderLinks(section.items)}
-                  </div>
-                )}
-              </div>
-            ) : (
+                    {section.title}
+                    <span className="text-slate-500">
+                      {tabletOpen === section.title ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
+                    </span>
+                  </button>
+                  {tabletOpen === section.title && (
+                    <div className="absolute left-0 top-full z-10 mt-1 w-max min-w-48 rounded-md border border-slate-700 bg-slate-900 py-2 shadow-xl">
+                      {renderLinks(section.items)}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
+            const { icon: Icon, to, end, label } = section.items[0]
+            return (
               <NavLink
-                key={section.items[0].to}
-                to={section.items[0].to}
-                end={section.items[0].end}
+                key={to}
+                to={to}
+                end={end}
                 onClick={() => setTabletOpen(null)}
                 className={({ isActive }) =>
-                  `shrink-0 rounded px-3 py-2 text-sm ${
+                  `flex shrink-0 items-center gap-2 rounded px-3 py-2 text-sm ${
                     isActive
                       ? 'bg-slate-700 text-white'
                       : 'text-slate-300 hover:bg-slate-800'
                   }`
                 }
               >
-                {section.items[0].label}
+                <Icon className="h-4 w-4 shrink-0 opacity-70" />
+                {label}
               </NavLink>
-            ),
-          )}
+            )
+          })}
         </div>
       </nav>
 

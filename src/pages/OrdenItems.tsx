@@ -225,7 +225,7 @@ function ItemRowEditor({
   const refReady = isService ? item.service_id != null : item.product_id != null
 
   return (
-    <tr className="h-16 bg-slate-50">
+    <tr className="h-16 bg-slate-100!">
       <td className="w-[4.5rem] px-2 py-3 text-center text-xs font-medium text-slate-500">
         {isService ? 'Servicio' : 'Producto'}
       </td>
@@ -670,9 +670,9 @@ export default function OrdenItems({
         )}
       </div>
 
-      <div className="overflow-visible rounded bg-white shadow hidden sm:block">
+      <div className="overflow-visible rounded bg-slate-200 shadow hidden sm:block">
         <table className="min-w-full table-fixed text-sm">
-          <thead className="bg-slate-50 text-slate-600">
+          <thead className="text-slate-700">
             <tr>
               <th className="w-[4.5rem] px-4 py-2 text-center font-medium uppercase">Tipo</th>
               <th className="w-[17rem] px-4 py-2 text-center font-medium uppercase">Concepto</th>
@@ -683,7 +683,7 @@ export default function OrdenItems({
               <th className="w-[13rem] px-4 py-2" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200 bg-white [&>tr:nth-child(odd)]:bg-slate-50">
             {items.map((it) =>
               editingId === it.id && editing ? (
                 <ItemRowEditor

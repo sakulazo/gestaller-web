@@ -52,7 +52,7 @@ export default function DataTable<T>({
   return (
     <div className="overflow-x-auto rounded bg-white shadow">
       <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-slate-600">
+        <thead className="bg-slate-200 text-slate-700">
           <tr>
             {columns.map((c) => (
               <th key={c.key} className={`px-4 py-2 text-center font-medium uppercase ${c.className ?? ''}`}>
@@ -61,12 +61,12 @@ export default function DataTable<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-slate-200 [&>tr:nth-child(odd)]:bg-slate-50">
           {rows.map((row, idx) => (
             <tr
               key={rowKey ? rowKey(row) : idx}
               onClick={() => onRowClick?.(row)}
-              className={onRowClick ? 'cursor-pointer hover:bg-slate-50' : undefined}
+              className={onRowClick ? 'cursor-pointer hover:bg-slate-100' : undefined}
             >
               {columns.map((c) => (
                 <td key={c.key} className={`px-4 py-2 ${alignCls(c.align)} ${c.className ?? ''}`}>

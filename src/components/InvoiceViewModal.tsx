@@ -108,7 +108,7 @@ export default function InvoiceViewModal({
           ) : (
             <div className="overflow-x-auto rounded border border-slate-200">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600">
+                <thead className="bg-slate-200 text-slate-700">
                   <tr>
                     <th className="px-3 py-2 text-center font-medium">Tipo</th>
                     <th className="px-3 py-2 text-center font-medium">Concepto</th>
@@ -118,7 +118,7 @@ export default function InvoiceViewModal({
                     <th className="px-3 py-2 text-center font-medium">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200 [&>tr:nth-child(odd)]:bg-slate-50">
                   {items.map((it: Item) => (
                     <tr key={it.id}>
                       <td className="px-3 py-2 text-xs font-medium text-slate-500">
@@ -132,7 +132,7 @@ export default function InvoiceViewModal({
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-slate-50 text-slate-700">
+                <tfoot className="border-t border-slate-200 bg-slate-50 text-slate-700">
                   <tr>
                     <td colSpan={5} className="px-3 py-2 text-right font-semibold">
                       Base imponible

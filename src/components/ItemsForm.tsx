@@ -247,9 +247,9 @@ export default function ItemsForm({
             ))}
           </div>
 
-          <div className="animate-fade-in overflow-visible rounded border border-slate-200 hidden sm:block">
+          <div className="animate-fade-in overflow-visible rounded border border-slate-300 bg-slate-200 hidden sm:block">
           <table className="min-w-full table-fixed text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="text-slate-700">
               <tr>
                 <th className="px-3 py-2 text-center font-medium">Tipo</th>
                 <th className="w-[22.5rem] px-3 py-2 text-center font-medium">Concepto</th>
@@ -263,7 +263,7 @@ export default function ItemsForm({
                 <th className="w-16 px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200 bg-white [&>tr:nth-child(odd)]:bg-slate-50">
               {items.map((item, idx) => (
                 <tr key={idx}>
                   <td className="px-3 py-3 text-xs font-medium text-slate-500">
