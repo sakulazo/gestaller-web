@@ -4,6 +4,7 @@ SPA de gestión de lavaderos y talleres: clientes, vehículos, servicios, órden
 
 - **Stack**: React 18, Vite, TypeScript, Tailwind CSS 4, React Query, Zod, axios, lucide-react.
 - **Repo hermano**: `gestaller-api` (backend FastAPI). El contrato entre ambos es la API + [`docs/error-policy.md`](./docs/error-policy.md) (copia sincronizada del backend).
+- **Deploy**: [`docs/DEPLOY.md`](./docs/DEPLOY.md) — el runtime vive en `sakulazo/infra-vps`, no aquí.
 
 ## Comandos
 
@@ -21,13 +22,19 @@ Con Docker (requiere el backend levantado; ambos composes comparten la red `gest
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-Producción (SPA compilada servida por Caddy en el VPS con `PUBLIC_HOST` obligatorio,
-Let's Encrypt automático; reverse proxy `/api` → `api:8000`; red `gestaller-prod`;
-publica :80 y :443). Orquestado por `../prod.sh`.
+**Producción: este repo no tiene despliegue propio** (ni compose, ni
+`Dockerfile.prod`, ni `Caddyfile`). El `Dockerfile` de la raíz compila con Vite y
+**exporta** `dist/` (`FROM scratch` + `--output type=local`) a
+`/srv/gestaller/public` en el VPS; lo publica un timer de infra y lo sirve el
+`caddy` global, que enruta `/api/*` al contenedor `gestaller-api-1` por el
+nombre. Todo eso está en `sakulazo/infra-vps` y está descrito en
+[`docs/DEPLOY.md`](./docs/DEPLOY.md).
 
-```bash
-docker compose --env-file ../.env -f docker-compose.prod.yml up --build
-```
+Si alguien pide un compose de producción **aquí**, la respuesta es que va en
+infra-vps: uno que publique `:80`/`:443` choca con el `caddy` del host y otro
+que levante su propio servicio `api` no lo alcanza nadie. No reintroducir
+`docker-compose.prod.yml`, `Dockerfile.prod` ni `Caddyfile` sin revisar
+`docs/DEPLOY.md`.
 
 - El proxy de desarrollo apunta a `VITE_DEV_PROXY_TARGET` (por defecto `http://localhost:8000`; en Docker lo fija el compose a `http://api:8000`).
 - Credenciales seed (las siembra el backend): **admin / admin123**.
@@ -68,6 +75,10 @@ docker compose --env-file ../.env -f docker-compose.prod.yml up --build
 - Sin tests de frontend todavía (`pnpm lint` es la única verificación estática).
 - Búsqueda/filtrado server-side con el param `search` **solo en Clientes, Vehículos e Histórico de órdenes**; en el resto de listados el backend lo ignora (devuelven todo paginado por `page`/`page_size`).
 - `tailwind.config.ts` no existe: Tailwind 4 se configura por CSS (`@import "tailwindcss"`).
+- `src/services/api.ts` espera **JSON** en `/api/*`. Si alguna vez una ruta de
+  la API responde `text/html`, el síntoma no es un 404: es el `index.html` de la
+  SPA llegando al cliente (fallback de Caddy mal acotado). Se comprueba con
+  `make contract` en infra-vps.
 
 ## Responsive (3 tamaños)
 

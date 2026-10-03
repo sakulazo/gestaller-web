@@ -33,10 +33,12 @@ frontend/
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
+├── Dockerfile        # build de producción que consume el VPS: exporta dist/ (no es una imagen servible)
 ├── docker-compose.dev.yml
 ├── docs/
 │   ├── SPECS.md           # Especificaciones de comportamiento de la SPA
-│   └── error-policy.md    # Contrato de errores (copia sincronizada del backend + comportamiento SPA)
+│   ├── error-policy.md    # Contrato de errores (copia sincronizada del backend + comportamiento SPA)
+│   └── DEPLOY.md          # Cómo se publica en el VPS (el runtime vive en infra-vps)
 ├── .env.example
 └── ...
 ```
@@ -82,6 +84,15 @@ pnpm preview   # Previsualizar el build de producción
 ```
 
 > No hay suite de tests: `pnpm lint` es la única verificación estática (pendiente añadir vitest/playwright).
+
+## Despliegue
+
+Este repo **no tiene despliegue propio**: no hay compose ni imagen servible
+para producción. El `Dockerfile` de la raíz compila con Vite y **exporta**
+`dist/`, que un timer del VPS publica en `/srv/gestaller/public` y sirve el
+`caddy` global (que además enruta `/api/*` a la API). Detalles, incluidos los
+motivos por los que no debe añadirse aquí un `docker-compose.prod.yml`, en
+[docs/DEPLOY.md](./docs/DEPLOY.md).
 
 ## Conexión con la API
 
