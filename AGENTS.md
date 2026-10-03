@@ -43,10 +43,10 @@ docker compose --env-file ../.env -f docker-compose.prod.yml up --build
 
 ## Marca (logo)
 
-- **Fuente de verdad: `src/assets/brand/logo.svg`** (maestro editable, con el cromo de Inkscape). No existe copia fuera del repo.
+- **Fuente de verdad: `src/assets/brand/logo.svg`** (maestro editable, con el cromo de Inkscape). Contiene **solo el símbolo**: el wordmark "Gestaller" se pinta con HTML en `Brand.tsx` y no debe volver a dibujarse dentro del SVG. No existe copia fuera del repo.
 - `scripts/brand.mjs` lo limpia (cabecera XML, comentarios, `defs`, `id`, `style` → atributos de presentación) y genera tres derivados, que **no se editan a mano**:
-  - `src/assets/brand/logo-on-dark.svg` — fondo oscuro (barra del layout, drawer).
-  - `src/assets/brand/logo-on-light.svg` — fondo claro (tarjeta de login, favicon): sustituye `#ffffff` → `#cbd5e1` y `#8e8e8e` → `#475569`.
+  - `src/assets/brand/logo-on-dark.svg` — fondo oscuro (barra del layout, drawer, login).
+  - `src/assets/brand/logo-on-light.svg` — fondo claro: sustituye `#ffffff` → `#cbd5e1` y `#8e8e8e` → `#475569`.
   - `public/favicon.svg` — copia de `logo-on-light.svg`.
 - Se ejecuta solo (en `pnpm dev` y `pnpm build`) o a mano con `pnpm brand`; los derivados se versionan para que `pnpm lint` y la revisión de diffs no dependan de generarlos. `node scripts/brand.mjs --check` falla si están caducados.
 - En desarrollo con Docker, `../dev.sh` ejecuta `pnpm brand` **en el host** antes de levantar el contenedor: si solo generase el contenedor (root sobre el bind mount), los derivados quedarían propiedad de root en el disco. Si se edita el maestro con el stack ya levantado hay que reiniciar el contenedor de la app para que se apliquen los cambios.
