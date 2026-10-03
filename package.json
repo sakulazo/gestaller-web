@@ -4,10 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "node scripts/brand.mjs && vite",
+    "build": "node scripts/brand.mjs && tsc && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "brand": "node scripts/brand.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.16",

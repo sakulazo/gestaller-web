@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { toApplicationError } from '../types/errors'
+import Brand from '../components/Brand'
 
 export default function Login() {
   const { login } = useAuth()
@@ -35,8 +36,8 @@ export default function Login() {
         noValidate
         className="w-full max-w-sm rounded bg-white p-8 shadow"
       >
-        <h1 className="mb-6 text-center text-2xl font-bold text-slate-800">
-          Gestaller
+        <h1 className="mb-6 flex justify-center">
+          <Brand variant="on-light" withWordmark symbolClassName="h-9" className="text-2xl text-slate-800" />
         </h1>
         <label htmlFor="username" className="mb-2 block text-sm text-slate-600">Usuario</label>
         <input

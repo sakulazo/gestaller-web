@@ -9,9 +9,10 @@ SPA de gestión de lavaderos y talleres: clientes, vehículos, servicios, órden
 
 ```bash
 pnpm install
-pnpm dev      # Servidor de desarrollo en :5173 (proxy /api → http://localhost:8000)
+pnpm dev      # Regenera la marca y levanta el servidor de desarrollo en :5173 (proxy /api → http://localhost:8000)
 pnpm lint     # tsc --noEmit
-pnpm build    # tsc && vite build
+pnpm build    # Regenera la marca, tsc && vite build
+pnpm brand    # Regenera solo los assets de marca (ver "Marca")
 ```
 
 Con Docker (requiere el backend levantado; ambos composes comparten la red `gestaller-dev`):
@@ -34,11 +35,22 @@ docker compose --env-file ../.env -f docker-compose.prod.yml up --build
 ## Arquitectura
 
 - `src/pages/` — 26 páginas importadas en `App.tsx`: una por módulo (incluye `Settings` en `/settings`, `TaxRates`, `PerfilTaller`, `HistoricoOrdenes`) + 4 de impresión (factura, presupuesto, resguardo, certificado) + Login, Dashboard y NotFound.
-- `src/components/` — Modal, DataTable, ItemsForm, CategoryManager, ConfirmDialog, SearchSelect, RequirePermission/ProtectedRoute, Toast, Form, Checkbox, ErrorBoundary, CarSilhouette.
+- `src/components/` — Modal, DataTable, ItemsForm, CategoryManager, ConfirmDialog, SearchSelect, RequirePermission/ProtectedRoute, Toast, Form, Checkbox, ErrorBoundary, Brand, CarSilhouette.
 - `src/hooks/useAuth.tsx` — token en localStorage, refresh token en cookie httpOnly (`/api/auth`), catálogo de permisos y `catalogReady`.
 - `src/hooks/usePaginatedQuery.ts` — listados paginados server-side (page + search con debounce; `queryKey` comparte prefijo con el modo `all` para que `invalidateQueries` invalide ambos).
 - `src/services/api.ts` — axios con cola de refresh concurrente al 401 y toasts de error.
 - `src/permissions.ts` — plantillas de roles (sin dependencias hardcodeadas).
+
+## Marca (logo)
+
+- **Fuente de verdad: `src/assets/brand/logo.svg`** (maestro editable, con el cromo de Inkscape). No existe copia fuera del repo.
+- `scripts/brand.mjs` lo limpia (cabecera XML, comentarios, `defs`, `id`, `style` → atributos de presentación) y genera tres derivados, que **no se editan a mano**:
+  - `src/assets/brand/logo-on-dark.svg` — fondo oscuro (barra del layout, drawer).
+  - `src/assets/brand/logo-on-light.svg` — fondo claro (tarjeta de login, favicon): sustituye `#ffffff` → `#cbd5e1` y `#8e8e8e` → `#475569`.
+  - `public/favicon.svg` — copia de `logo-on-light.svg`.
+- Se ejecuta solo (en `pnpm dev` y `pnpm build`) o a mano con `pnpm brand`; los derivados se versionan para que `pnpm lint` y la revisión de diffs no dependan de generarlos. `node scripts/brand.mjs --check` falla si están caducados.
+- En desarrollo con Docker, `../dev.sh` ejecuta `pnpm brand` **en el host** antes de levantar el contenedor: si solo generase el contenedor (root sobre el bind mount), los derivados quedarían propiedad de root en el disco. Si se edita el maestro con el stack ya levantado hay que reiniciar el contenedor de la app para que se apliquen los cambios.
+- `src/components/Brand.tsx` solo consume las variantes por URL (Vite las hashea en el build); el wordmark "Gestaller" se pinta con texto y hereda tamaño/color del contenedor.
 
 ## Convenciones (obligatorias)
 
@@ -69,6 +81,6 @@ Breakpoints propios definidos en `src/index.css` (`@theme`), mobile-first:
 
 El layout (`src/components/Layout.tsx`) usa un único menú en todos los tamaños:
 
-- Barra de marca superior (marca "Gestaller", usuario y "Cerrar sesión") siempre visible.
+- Barra de marca superior (`<Brand variant="on-dark">`, usuario y "Cerrar sesión") siempre visible.
 - Debajo, el **nav horizontal** agrupado por secciones (Taller, Comercial, Catálogo, Administración), con dropdowns por sección, siempre visible en cualquier tamaño.
 - **Mobile (<768px)**: además, botón ☰ en la barra de marca que abre un drawer deslizante con el acordeón de navegación completo. En tablet/desktop el ☰ está oculto (`sm:hidden`).

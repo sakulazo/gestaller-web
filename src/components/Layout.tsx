@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import Brand from './Brand'
 
 interface NavItem {
   to: string
@@ -213,9 +214,10 @@ export default function Layout() {
           >
             <Menu className="h-6 w-6" />
           </button>
-          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold">
-            Gestaller
-          </div>
+          <Brand
+            withWordmark
+            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg"
+          />
           <div className="flex flex-1 items-center justify-end gap-3">
             <p className="hidden truncate text-sm sm:block">{user?.name}</p>
             <button
@@ -320,7 +322,7 @@ export default function Layout() {
           />
           <aside className="animate-scale-in absolute inset-y-0 left-0 flex w-64 flex-col bg-slate-900 text-slate-100 shadow-xl">
             <div className="flex items-center gap-3 px-4 py-4">
-              <div className="flex flex-1 text-lg font-bold">Gestaller</div>
+              <Brand withWordmark className="flex-1 text-lg" />
               <button
                 onClick={() => setMobileOpen(false)}
                 aria-label="Cerrar menú"
