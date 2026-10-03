@@ -76,10 +76,10 @@ export default function Login() {
         </div>
 
         <div className="relative mx-auto w-full max-w-md">
-          <Brand variant="on-dark" withWordmark symbolClassName="h-20" className="text-4xl" />
+          <Brand variant="on-dark" withWordmark symbolClassName="h-40" className="text-6xl" />
         </div>
 
-        <div className="relative mx-auto w-full max-w-md">
+        <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
           <p className="text-3xl font-semibold leading-tight tracking-tight text-white lg:text-4xl">
             El taller y el lavadero, en una sola pantalla
           </p>
@@ -98,16 +98,12 @@ export default function Login() {
             ))}
           </ul>
         </div>
-
-        <p className="relative mx-auto w-full max-w-md text-xs text-slate-500">
-          Gestión de lavaderos y talleres
-        </p>
       </aside>
 
       <main className="flex items-center justify-center py-10">
         <div className="w-full max-w-md">
           <div className="mb-8 flex justify-center md:hidden">
-            <Brand variant="on-dark" withWordmark symbolClassName="h-9" className="text-xl" />
+            <Brand variant="on-dark" withWordmark symbolClassName="h-18" className="text-3xl" />
           </div>
 
           <form
