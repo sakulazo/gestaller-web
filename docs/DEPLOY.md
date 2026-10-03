@@ -7,7 +7,7 @@
 
 ## Qué corre en el VPS
 
-En `gestaller.sakulazo.com` hay **dos** contenedores y ninguno es de este repo:
+En `gestaller.sakulazo.com` hay **tres** contenedores y ninguno es de este repo:
 
 | Contenedor | Qué es | Dónde se define |
 |---|---|---|
@@ -27,17 +27,25 @@ Un timer del infra (`deploy-gestaller.timer`, cada 5 min) ejecuta
 publicación. Para este repo, en síntesis:
 
 ```bash
-docker build -o /srv/gestaller/public .        # usa el Dockerfile de la raíz
+docker build --output type=local,dest="$TMP_DIR" "$WEB_DIR"
+find "$PUBLIC_DIR" -mindepth 1 -delete        # rotación: los hashes de Vite se acumulan
+cp -a "$TMP_DIR"/. "$PUBLIC_DIR"/
 ```
+
+(Esquema de `scripts/deploy-gestaller.sh` de infra-vps. No es un comando para
+copiar a mano.)
 
 El `Dockerfile` de la raíz es un multi-stage que compila con Vite y **exporta**
 `dist/` con `FROM scratch` + `--output type=local`. No hay `CMD` ni servidor:
 solo genera ficheros. Por eso el `Dockerfile` de la raíz es el único que
 existe, y por eso se llama así y no `Dockerfile.prod`.
 
-El build se hace **sin red**, tirando de `pnpm-lock.yaml` con
-`--frozen-lockfile`, y con `VITE_API_URL` vacío: el cliente usa `/api`
-same-origin y es el Caddyfile del host quien reparte entre la SPA y la API.
+El build tira de `pnpm-lock.yaml` con `--frozen-lockfile`. En el VPS el checkout
+no tiene `.env` (está gitignorado), así que `VITE_API_URL` llega vacía al build
+y el cliente cae al `baseURL` relativo `/api` (`src/services/api.ts`): es el
+Caddyfile del host quien reparte entre la SPA y la API, no el navegador. Si
+alguna vez existiera un `.env` en ese checkout, la SPA apuntaría a lo que
+diga ahí y dejaría de hablar con su propia API.
 
 ## Por qué este repo no lleva `docker-compose.prod.yml`
 
