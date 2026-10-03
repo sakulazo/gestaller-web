@@ -91,8 +91,12 @@ export default function Layout() {
   const navigate = useNavigate()
   const [openSections, setOpenSections] = useState<string[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [tabletOpen, setTabletOpen] = useState<string | null>(null)
+  const [openSection, setOpenSection] = useState<{
+    title: string
+    source: 'hover' | 'click' | 'focus'
+  } | null>(null)
   const tabletNavRef = useRef<HTMLDivElement>(null)
+  const triggerPointerRef = useRef<string | null>(null)
 
   const handleLogout = () => {
     logout()
@@ -100,24 +104,41 @@ export default function Layout() {
   }
 
   useEffect(() => {
-    if (tabletOpen === null) return
+    if (openSection === null) return
     const onPointerDown = (e: PointerEvent) => {
       if (tabletNavRef.current && !tabletNavRef.current.contains(e.target as Node)) {
-        setTabletOpen(null)
+        setOpenSection(null)
       }
     }
     document.addEventListener('pointerdown', onPointerDown)
     return () => document.removeEventListener('pointerdown', onPointerDown)
-  }, [tabletOpen])
+  }, [openSection])
+
+  const isSectionOpen = (title: string) => openSection?.title === title
+
+  const openFromHover = (title: string) => setOpenSection({ title, source: 'hover' })
+
+  const closeFromHover = () =>
+    setOpenSection((prev) => (prev?.source === 'hover' ? null : prev))
+
+  const toggleFromClick = (title: string) =>
+    setOpenSection((prev) =>
+      prev?.title === title ? null : { title, source: 'click' },
+    )
+
+  const openFromFocus = (title: string) => setOpenSection({ title, source: 'focus' })
+
+  const closeFromFocus = (e: React.FocusEvent<HTMLDivElement>, title: string) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+    setOpenSection((prev) =>
+      prev?.title === title && prev.source === 'focus' ? null : prev,
+    )
+  }
 
   const toggleSection = (title: string) => {
     setOpenSections((prev) =>
       prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title],
     )
-  }
-
-  const toggleTabletSection = (title: string) => {
-    setTabletOpen((prev) => (prev === title ? null : title))
   }
 
   const visibleSections = navSections
@@ -144,7 +165,7 @@ export default function Layout() {
         className={linkClass}
         onClick={() => {
           setMobileOpen(false)
-          setTabletOpen(null)
+          setOpenSection(null)
           setOpenSections([])
         }}
       >
@@ -215,13 +236,32 @@ export default function Layout() {
         <div className="flex flex-wrap items-center gap-1 px-3 py-2">
           {visibleSections.map((section) => {
             if (section.title) {
+              const open = isSectionOpen(section.title)
               return (
-                <div key={section.title} className="relative">
+                <div
+                  key={section.title}
+                  className="relative"
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === 'mouse') openFromHover(section.title!)
+                  }}
+                  onPointerLeave={(e) => {
+                    if (e.pointerType === 'mouse') closeFromHover()
+                  }}
+                  onFocus={() => openFromFocus(section.title!)}
+                  onBlur={(e) => closeFromFocus(e, section.title!)}
+                >
                   <button
-                    onClick={() => toggleTabletSection(section.title!)}
-                    aria-expanded={tabletOpen === section.title}
+                    onPointerDown={(e) => {
+                      triggerPointerRef.current = e.pointerType
+                    }}
+                    onClick={(e) => {
+                      // Con ratón el hover ya gobierna el submenú: el click no lo cerraría.
+                      if (e.detail > 0 && triggerPointerRef.current === 'mouse') return
+                      toggleFromClick(section.title!)
+                    }}
+                    aria-expanded={open}
                     className={`flex shrink-0 items-center gap-2 rounded px-3 py-2 text-sm ${
-                      tabletOpen === section.title
+                      open
                         ? 'bg-slate-800 text-white'
                         : 'text-slate-300 hover:bg-slate-800'
                     }`}
@@ -231,16 +271,18 @@ export default function Layout() {
                     )}
                     {section.title}
                     <span className="text-slate-500">
-                      {tabletOpen === section.title ? (
+                      {open ? (
                         <ChevronUp className="h-3 w-3" />
                       ) : (
                         <ChevronDown className="h-3 w-3" />
                       )}
                     </span>
                   </button>
-                  {tabletOpen === section.title && (
-                    <div className="absolute left-0 top-full z-10 mt-1 w-max min-w-48 rounded-md border border-slate-700 bg-slate-900 py-2 shadow-xl">
-                      {renderLinks(section.items)}
+                  {open && (
+                    <div className="absolute left-0 top-full z-10 pt-1">
+                      <div className="animate-fade-in w-max min-w-48 rounded-md border border-slate-700 bg-slate-900 py-2 shadow-xl">
+                        {renderLinks(section.items)}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -253,7 +295,7 @@ export default function Layout() {
                 key={to}
                 to={to}
                 end={end}
-                onClick={() => setTabletOpen(null)}
+                onClick={() => setOpenSection(null)}
                 className={({ isActive }) =>
                   `flex shrink-0 items-center gap-2 rounded px-3 py-2 text-sm ${
                     isActive
