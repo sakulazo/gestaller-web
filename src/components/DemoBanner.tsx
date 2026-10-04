@@ -28,6 +28,7 @@ export default function DemoBanner() {
       setRemaining(diff)
       // Al llegar a cero el backend esta recreando la base de datos: recargar
       // evita que la primera peticion que haga el visitante caiga en un 502.
+      if (diff <= 0) window.location.reload()
       //
       // OJO: la recarga solo ocurre en este tick. Tras recargar, la cuenta atras
       // se recalcula al PROXIMO reset (unas horas despues), asi que no avisa de
