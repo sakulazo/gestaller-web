@@ -30,6 +30,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import Brand from './Brand'
+import DemoBanner from './DemoBanner'
 
 interface NavItem {
   to: string
@@ -336,6 +337,9 @@ export default function Layout() {
         </div>
       )}
       <main className="flex-1 p-6">
+        {/* El aviso de la demo sigue visible despues de iniciar sesion: es
+            cuando empieza a crearse datos que el reset va a borrar. */}
+        <DemoBanner />
         <Outlet />
       </main>
     </div>

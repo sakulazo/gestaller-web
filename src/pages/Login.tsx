@@ -21,6 +21,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { toApplicationError } from '../types/errors'
 import Brand from '../components/Brand'
+import DemoBanner from '../components/DemoBanner'
 
 const highlights: { icon: LucideIcon; text: string }[] = [
   { icon: ClipboardList, text: 'Órdenes de trabajo, check-in y entrega' },
@@ -105,6 +106,10 @@ export default function Login() {
           <div className="mb-8 flex justify-center md:hidden">
             <Brand variant="on-dark" withWordmark symbolClassName="h-36" className="text-3xl" />
           </div>
+
+          {/* Aviso de demo: es lo primero que ve quien abre la demo, y el sitio
+              donde hay que decir que lo que cree no se conserva. */}
+          <DemoBanner />
 
           <form
             onSubmit={handleSubmit}
