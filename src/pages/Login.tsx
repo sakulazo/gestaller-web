@@ -103,7 +103,7 @@ export default function Login() {
       <main className="flex items-center justify-center py-10">
         <div className="w-full max-w-md">
           <div className="mb-8 flex justify-center md:hidden">
-            <Brand variant="on-dark" withWordmark symbolClassName="h-18" className="text-3xl" />
+            <Brand variant="on-dark" withWordmark symbolClassName="h-36" className="text-3xl" />
           </div>
 
           <form
