@@ -23,8 +23,14 @@ interface Reloj {
   day: number
   hour: number
   minute: number
+  second: number
 }
 
+// `second` está porque el offset se calcula con los MISMOS campos que se leen
+// del reloj, y si el reloj no trae segundos el offset arrastra un error de los
+// segundos que se actualizan en cada tick: el objetivo se desliza junto con el
+// reloj y la cuenta atrás se queda clavada en el minuto que falta (ver
+// `offsetDeZona`).
 const PARTE = new Intl.DateTimeFormat('en-CA', {
   timeZone: RESET_TIMEZONE,
   hourCycle: 'h23',
@@ -33,6 +39,7 @@ const PARTE = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
   hour: '2-digit',
   minute: '2-digit',
+  second: '2-digit',
 })
 
 // Hora de reloj de `instante` en la zona del reset. `hourCycle: 'h23'` (y no
@@ -48,14 +55,34 @@ function relojEnZonaReset(instante: Date): Reloj {
     day: Number(partes.day),
     hour: Number(partes.hour),
     minute: Number(partes.minute),
+    second: Number(partes.second),
   }
 }
 
-// Los mismos campos de reloj, pero como milisegundos naivos (los de un Date
-// con los que devuelve `new Date(y, m, d)` antes de aplicar el offset). La
-// diferencia con el instante real es exactamente el offset de la zona.
-function relojComoMillis(r: Reloj): number {
-  return Date.UTC(r.year, r.month - 1, r.day, r.hour, r.minute, 0, 0)
+// Offset de la zona (ms) en el instante `instante`: su hora de reloj, leída
+// como si fuera UTC, menos el instante real.
+//
+// OJO al comparar los dos terminos: tienen que traer los MISMOS segundos y
+// milisegundos. Si uno se trunca a 0 y el otro no, la diferencia ya no es el
+// offset de la zona sino el offset MAS los segundos del instante, y el error
+// sale con signo contrario en el objetivo: el reset caia en 13:05:30 en vez de
+// a las 13:05:00. Como el banner recalcula esto en cada tick y el error vale
+// exactamente los segundos de ahora, el objetivo se movia a la vez que el
+// reloj y la cuenta atrás se quedaba CLAVADA en `00:01:00` (no bajaba) y luego
+// saltaba a `02:00:00`. Los milisegundos van con `getMilliseconds()` del
+// instante real, no con un 0, por el mismo motivo.
+function offsetDeZona(instante: Date): number {
+  const r = relojEnZonaReset(instante)
+  const relojComoUtc = Date.UTC(
+    r.year,
+    r.month - 1,
+    r.day,
+    r.hour,
+    r.minute,
+    r.second,
+    instante.getMilliseconds(),
+  )
+  return relojComoUtc - instante.getTime()
 }
 
 export function nextDemoReset(from: Date = new Date()): Date {
@@ -71,8 +98,7 @@ export function nextDemoReset(from: Date = new Date()): Date {
   const objetivo = Date.UTC(ahora.year, ahora.month - 1, ahora.day, hora, RESET_MINUTE)
 
   // Primera aproximación: se supone el offset que la zona tiene ahora mismo.
-  const offset = relojComoMillis(ahora) - from.getTime()
-  const instante = new Date(objetivo - offset)
+  const instante = new Date(objetivo - offsetDeZona(from))
 
   // Corrección: se lee la hora de reloj del resultado y se ajusta la diferencia.
   // Con el offset correcto sale cero; si el reloj ha cambiado entre medias (el
@@ -83,6 +109,12 @@ export function nextDemoReset(from: Date = new Date()): Date {
   // contra la hora leida (siempre 0..23) producia una diferencia de 24 h que
   // empujaba el reset al dia siguiente (a las 23:59 el proximo reset caia a las
   // 01:05 del dia SIGUIENTE, con un reset de por medio).
+  //
+  // Esta correccion es a granularidad de MINUTO a proposito: el offset ya es
+  // exacto (ver `offsetDeZona`), asi que lo unico que queda por corregir es el
+  // cambio de hora, que son horas enteras. Si algun dia se hace a granularidad
+  // de segundo, el termino de aqui tiene que traer `leido.second` o se
+  // reintroduce el error que acaba de arreglarse.
   const leido = relojEnZonaReset(instante)
   let deltaMin = ((hora % 24) * 60 + RESET_MINUTE) - (leido.hour * 60 + leido.minute)
   if (deltaMin > 12 * 60) deltaMin -= 24 * 60

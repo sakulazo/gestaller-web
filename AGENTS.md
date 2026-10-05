@@ -12,6 +12,7 @@ SPA de gestión de lavaderos y talleres: clientes, vehículos, servicios, órden
 pnpm install
 pnpm dev      # Regenera la marca y levanta el servidor de desarrollo en :5173 (proxy /api → http://localhost:8000)
 pnpm lint     # tsc --noEmit
+pnpm test     # vitest run
 pnpm build    # Regenera la marca, tsc && vite build
 pnpm brand    # Regenera solo los assets de marca (ver "Marca")
 ```
@@ -72,7 +73,11 @@ que levante su propio servicio `api` no lo alcanza nadie. No reintroducir
 
 ## Gotchas conocidos
 
-- Sin tests de frontend todavía (`pnpm lint` es la única verificación estática).
+- Tests: hay `vitest` (`pnpm test`) pero la cobertura es **mínima**: solo `src/lib/demoReset.ts` (la cuenta atrás de la demo) y la lógica pura equivalente. Un módulo sin test sigue siendo el normal, no la excepción; si tocas lógica de cálculo (fechas, importes, agregados), añade el test en el mismo commit que el arreglo. Coherente con la regla de infra-vps de que un check nuevo tiene que tener un caso que lo haga fallar.
+- La cuenta atrás de la demo (`src/lib/demoReset.ts`) calcula en la **zona del servidor**, no en la del navegador, y su objetivo es el minuto 5 de cada hora impar. Dos cosas que costan sangre y ya estan cubiertas por `src/lib/demoReset.test.ts`:
+  - El offset de la zona se construye con los **mismos** campos que se leen del reloj (incluidos segundos y milisegundos). Truncar uno de los dos términos hace que el objetivo se desplace con el reloj en cada tick y el contador se quede clavado.
+  - La recarga al reset se dispara por **cambio de objetivo**, nunca por `diff <= 0`: la función devuelve siempre un instante futuro, así que `diff` salta de ~0 a 2 h sin pasar por cero.
+  - En el cambio de hora de **octubre** la hora 02:00 ocurre dos veces, y de las 01:06 a las 03:05 hay 119 min de reloj pero **179 reales**. El contador dice casi 3 h y es correcto: el timer sí dispara a las 03:05.
 - Búsqueda/filtrado server-side con el param `search` **solo en Clientes, Vehículos e Histórico de órdenes**; en el resto de listados el backend lo ignora (devuelven todo paginado por `page`/`page_size`).
 - `tailwind.config.ts` no existe: Tailwind 4 se configura por CSS (`@import "tailwindcss"`).
 - `src/services/api.ts` espera **JSON** en `/api/*`. Si alguna vez una ruta de

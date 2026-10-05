@@ -18,7 +18,7 @@
 // tiempo de build, asi que la rama se PLEGADA y el banner entero desaparece del
 // bundle de produccion: no es que no se pinte, es que no esta. Por eso se
 // comprueba con `grep` en los dos sentidos y no con un navegador.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { nextDemoReset } from '../lib/demoReset'
 
 const ES_DEMO = import.meta.env.VITE_DEMO_BANNER === '1'
@@ -36,6 +36,9 @@ export default function DemoBanner() {
   const [remaining, setRemaining] = useState(
     () => nextDemoReset().getTime() - Date.now(),
   )
+  // Instante del reset que esta contando el tick anterior. Es lo que permite
+  // notar que se ha pasado uno: ver el comentario del reload mas abajo.
+  const ultimoObjetivo = useRef<number | null>(null)
 
   useEffect(() => {
     // En produccion no hay cuenta atras que correr: el return temprano va DEBAJO
@@ -43,17 +46,32 @@ export default function DemoBanner() {
     // efecto si se puede no montar.
     if (!esDemo) return
     const id = setInterval(() => {
-      const diff = nextDemoReset().getTime() - Date.now()
-      setRemaining(diff)
-      // Al llegar a cero el backend esta recreando la base de datos: recargar
-      // evita que la primera peticion que haga el visitante caiga en un 502.
-      if (diff <= 0) window.location.reload()
+      const ahora = Date.now()
+      const objetivo = nextDemoReset(new Date(ahora)).getTime()
+      setRemaining(objetivo - ahora)
+
+      // Al LLEGAR el reset el backend esta recreando la base de datos: recargar
+      // evita que la primera peticion que haga el visitante caiga en un 502 (la
+      // ventana dura entre 30 y 60 s; ver docs/demo-gestaller.md en infra-vps).
       //
-      // OJO: la recarga solo ocurre en este tick. Tras recargar, la cuenta atras
-      // se recalcula al PROXIMO reset (unas horas despues), asi que no avisa de
-      // que la demo siga caida: eso lo dice ya el 502 de la propia peticion, que
-      // es la senal que el visitante puede ver, en vez de un contador que
-      // miente.
+      // Se detecta por el CAMBIO DE OBJETIVO, no por `diff <= 0`. `nextDemoReset()`
+      // devuelve siempre un instante futuro, porque en cuanto llega a las 13:05:00
+      // ya esta contando hasta las 15:05: o sea que `diff` salta de ~0 a 2 h sin
+      // pasar por <= 0 y una recarga por `diff <= 0` no ocurre NUNCA (llevo dos
+      // commits puesta y no se habia dado cuenta). Tampoco vale mirar si `diff`
+      // supera las 2 h, porque `diff` se recalcula desde cero en cada tick y
+      // siempre sale (0, 2 h]. Comparar el objetivo de ahora con el del tick
+      // anterior si que se ve: si ha cambiado, es que se ha pasado un reset.
+      if (ultimoObjetivo.current !== null && objetivo !== ultimoObjetivo.current) {
+        window.location.reload()
+        return
+      }
+      ultimoObjetivo.current = objetivo
+      //
+      // Tras recargar, la cuenta atras se recalcula al PROXIMO reset (unas horas
+      // despues), asi que no avisa de que la demo siga caida: eso lo dice ya el
+      // 502 de la propia peticion, que es la senal que el visitante puede ver, en
+      // vez de un contador que miente.
     }, 1000)
     return () => clearInterval(id)
   }, [esDemo])
