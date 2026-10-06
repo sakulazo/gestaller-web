@@ -27,6 +27,12 @@ import type { Product, ProductInput } from '../types'
 
 const baseColumns: Column<Product>[] = [
   { key: 'name', header: 'Nombre', align: 'left' },
+  {
+    key: 'description',
+    header: 'Descripción',
+    align: 'left',
+    render: (r) => r.description ?? '—',
+  },
   { key: 'brand', header: 'Marca', align: 'left' },
   { key: 'category_id', header: 'Categoría', align: 'left' },
   {
