@@ -1,6 +1,7 @@
 // Roles (RBAC): CRUD + asignación de permisos agrupada por módulo.
 
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -35,6 +36,7 @@ const columns: Column<Role>[] = [
 ]
 
 export default function Roles() {
+  const navigate = useNavigate()
   const { can, getModules } = useAuth()
   const { success, info } = useToast()
   const queryClient = useQueryClient()
@@ -199,12 +201,17 @@ export default function Roles() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-page-title font-bold text-slate-800">Roles</h1>
-        {can('roles.create') && (
-          <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
-            <Plus className="h-4 w-4" />
-            Nuevo rol
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => navigate('/users')} className={btnGhost}>
+            Volver a usuarios
           </button>
-        )}
+          {can('roles.create') && (
+            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+              <Plus className="h-4 w-4" />
+              Nuevo rol
+            </button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
