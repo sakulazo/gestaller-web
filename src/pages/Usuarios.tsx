@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
-import { FormInput } from '../components/Form'
+import { FormInput, FormPassword } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
 import { useFormMutation } from '../hooks/useFormMutation'
@@ -17,15 +17,26 @@ import { userCreateSchema, userUpdateSchema } from '../lib/validation'
 import type { User, UserInput } from '../types'
 
 const columns: Column<User>[] = [
-  { key: 'username', header: 'Usuario' },
-  { key: 'name', header: 'Nombre' },
-  { key: 'email', header: 'Email' },
+  { key: 'username', header: 'Usuario', align: 'left' },
+  { key: 'name', header: 'Nombre', align: 'left' },
+  {
+    key: 'email',
+    header: 'Email',
+    align: 'left',
+    className: 'hidden sm:table-cell',
+  },
   {
     key: 'roles',
     header: 'Roles',
+    align: 'left',
     render: (u) => u.roles.join(', ') || '—',
   },
-  { key: 'is_active', header: 'Activo', render: (u) => (u.is_active ? 'Sí' : 'No') },
+  {
+    key: 'is_active',
+    header: 'Activo',
+    className: 'hidden sm:table-cell',
+    render: (u) => (u.is_active ? 'Sí' : 'No'),
+  },
 ]
 
 export default function Usuarios() {
@@ -121,7 +132,7 @@ export default function Usuarios() {
             </button>
           )}
           {can('users.create') && (
-            <button onClick={openCreate} className={btnPrimary}>
+            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
               Nuevo usuario
             </button>
           )}
@@ -175,13 +186,9 @@ export default function Usuarios() {
             />
           </div>
           <div className="col-span-2">
-            <label className={labelCls}>
-              Contraseña {editing ? '(déjala vacía para no cambiarla)' : '*'}
-            </label>
-            <FormInput
+            <FormPassword
               name="password"
-              label=""
-              type="password"
+              label={editing ? 'Contraseña (déjala vacía para no cambiarla)' : 'Contraseña'}
               required={!editing}
               minLength={8}
               error={fieldErrors.password}

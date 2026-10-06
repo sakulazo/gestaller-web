@@ -17,8 +17,8 @@ export default function Modal({ open, title, onClose, children, stacked, wide }:
   if (!open) return null
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 ${
-        stacked ? 'z-[60] bg-slate-900/40' : 'bg-slate-900/50'
+      className={`fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 backdrop-blur-sm ${
+        stacked ? 'z-[60] bg-slate-900/50' : 'bg-slate-900/60'
       }`}
     >
       <div className={`my-8 w-full animate-scale-in rounded bg-white p-6 shadow-xl ${wide ? 'max-w-5xl' : 'max-w-4xl'}`}>

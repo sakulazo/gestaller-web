@@ -112,7 +112,7 @@ export default function TaxRates() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-page-title font-bold text-slate-800">Tasas de IVA</h1>
         {can('tax_rates.create') && (
-          <button onClick={openCreate} className={btnPrimary}>
+          <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
             Nueva tasa
           </button>
         )}
@@ -122,6 +122,7 @@ export default function TaxRates() {
         <p className="text-slate-500">Cargando…</p>
       ) : (
         <DataTable
+          className="mx-auto sm:w-3/5"
           columns={columns}
           rows={items}
           rowKey={(t) => t.id}

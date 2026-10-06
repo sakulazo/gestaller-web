@@ -27,9 +27,14 @@ import type { Vehicle, VehicleInput } from '../types'
 
 const columns: Column<Vehicle>[] = [
   { key: 'plate', header: 'Matrícula', render: (v) => <div className="text-center">{v.plate}</div> },
-  { key: 'make', header: 'Marca', align: 'left' },
+  { key: 'make', header: 'Marca', align: 'left', className: 'hidden sm:table-cell' },
   { key: 'model', header: 'Modelo', align: 'left' },
-  { key: 'year', header: 'Año', render: (v) => <div className="text-center">{v.year ?? ''}</div> },
+  {
+    key: 'year',
+    header: 'Año',
+    className: 'hidden sm:table-cell',
+    render: (v) => <div className="text-center">{v.year ?? ''}</div>,
+  },
 ]
 
 export default function Vehiculos() {
@@ -65,7 +70,13 @@ export default function Vehiculos() {
   const tableColumns: Column<Vehicle>[] = [
     ...columns,
     { key: 'client_id', header: 'Propietario', align: 'left', render: (v) => v.client_name ?? clientName(v.client_id) },
-    { key: 'category_id', header: 'Categoría', align: 'left', render: (v) => categoryName(v.category_id) },
+    {
+      key: 'category_id',
+      header: 'Categoría',
+      align: 'left',
+      className: 'hidden sm:table-cell',
+      render: (v) => categoryName(v.category_id),
+    },
 
   ]
 
@@ -146,7 +157,7 @@ export default function Vehiculos() {
             </button>
           )}
           {can('vehicles.create') && (
-            <button onClick={openCreate} className={btnPrimary}>
+            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
               Nuevo vehículo
             </button>
           )}

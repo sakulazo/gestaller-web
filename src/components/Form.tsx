@@ -1,6 +1,7 @@
 // Componentes de formulario reutilizables con soporte de errores.
 
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { inputCls, labelCls } from './ui'
 
 // ---------- FieldError ----------
@@ -77,6 +78,51 @@ export function FormInput({ name, label, error, required, className, ...rest }: 
         className={`${inputCls} w-full ${className ?? ''}`}
         {...rest}
       />
+    </FormField>
+  )
+}
+
+// ---------- FormPassword ----------
+
+/** Igual que `FormInput`, pero con el botón del ojo para revelar el texto. `type`
+ *  lo controla el propio componente, por eso se omite de las props admitidas. */
+interface FormPasswordProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  name: string
+  label: string
+  error?: string
+}
+
+export function FormPassword({ name, label, error, required, className, ...rest }: FormPasswordProps) {
+  const errorId = `${name}-error`
+  const [visible, setVisible] = useState(false)
+  return (
+    <FormField name={name} label={label} error={error} required={required}>
+      <div className="relative">
+        <input
+          id={name}
+          name={name}
+          type={visible ? 'text' : 'password'}
+          required={required}
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? errorId : undefined}
+          className={`${inputCls} w-full pr-10 ${className ?? ''}`}
+          {...rest}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          aria-pressed={visible}
+          className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:text-slate-600"
+        >
+          {visible ? (
+            <EyeOff className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Eye className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+      </div>
     </FormField>
   )
 }

@@ -33,6 +33,8 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void
   rowKey?: (row: T) => string | number
   pagination?: TablePagination
+  /** Clases extra en el contenedor de la tabla (p. ej. ancho restringido). */
+  className?: string
 }
 
 export default function DataTable<T>({
@@ -41,6 +43,7 @@ export default function DataTable<T>({
   onRowClick,
   rowKey,
   pagination,
+  className,
 }: DataTableProps<T>) {
   const page = pagination?.page ?? 1
   const totalPages = pagination?.totalPages ?? 1
@@ -50,7 +53,7 @@ export default function DataTable<T>({
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1
   const end = Math.min(page * pageSize, total)
   return (
-    <div className="overflow-x-auto rounded bg-white shadow">
+    <div className={`overflow-x-auto rounded bg-white shadow ${className ?? ''}`}>
       <table className="min-w-full text-sm">
         <thead className="bg-slate-200 text-slate-700">
           <tr>
