@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
@@ -254,7 +255,8 @@ export default function Presupuestos() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-page-title font-bold text-slate-800">Presupuestos</h1>
         {can('quotes.create') && (
-          <button onClick={openCreate} className={btnPrimary}>
+          <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+            <Plus className="h-4 w-4" />
             Nuevo presupuesto
           </button>
         )}

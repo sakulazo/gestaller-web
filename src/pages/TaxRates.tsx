@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
 import Checkbox from '../components/Checkbox'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
@@ -113,6 +114,7 @@ export default function TaxRates() {
         <h1 className="text-page-title font-bold text-slate-800">Tasas de IVA</h1>
         {can('tax_rates.create') && (
           <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+            <Plus className="h-4 w-4" />
             Nueva tasa
           </button>
         )}

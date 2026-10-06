@@ -1,6 +1,7 @@
 // Facturas (listado y creación con líneas; las emitidas no se modifican).
 
 import { useState } from 'react'
+import { Plus } from 'lucide-react'
 import DataTable, { type Column } from '../components/DataTable'
 import InvoiceFormModal from '../components/InvoiceFormModal'
 import InvoiceViewModal from '../components/InvoiceViewModal'
@@ -75,7 +76,8 @@ export default function Facturas() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-page-title font-bold text-slate-800">Facturas</h1>
         {can('invoices.create') && (
-          <button onClick={() => setModalOpen(true)} className={btnPrimary}>
+          <button onClick={() => setModalOpen(true)} className={`${btnPrimary} inline-flex items-center gap-2`}>
+            <Plus className="h-4 w-4" />
             Nueva factura
           </button>
         )}

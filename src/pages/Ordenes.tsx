@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { Plus } from 'lucide-react'
 import DataTable, { type Column } from '../components/DataTable'
 import ConfirmDialog from '../components/ConfirmDialog'
 import InvoiceFormModal from '../components/InvoiceFormModal'
@@ -319,7 +320,8 @@ export default function Ordenes() {
             Histórico
           </button>
           {can('work_orders.create') && (
-            <button onClick={openCreate} className={btnPrimary}>
+            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+              <Plus className="h-4 w-4" />
               Nueva orden
             </button>
           )}

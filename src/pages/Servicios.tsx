@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
@@ -54,13 +55,13 @@ export default function Servicios() {
     {
       key: 'category_id',
       header: 'Categoría',
-      align: 'center',
+      align: 'left',
       render: (s) => categoryMap.get(s.category_id) ?? String(s.category_id),
     },
     {
       key: 'price',
       header: 'Precio',
-      align: 'center',
+      align: 'right',
       render: (s) => `${Number(s.price).toFixed(2)} €`,
     },
     { key: 'duration_minutes', header: 'Duración (min)', align: 'center' },
@@ -135,7 +136,8 @@ export default function Servicios() {
             </button>
           )}
           {can('services.create') && (
-            <button onClick={openCreate} className={btnPrimary}>
+            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+              <Plus className="h-4 w-4" />
               Nuevo servicio
             </button>
           )}

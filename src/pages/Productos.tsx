@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
@@ -25,12 +26,13 @@ import { productSchema } from '../lib/validation'
 import type { Product, ProductInput } from '../types'
 
 const baseColumns: Column<Product>[] = [
-  { key: 'name', header: 'Nombre' },
-  { key: 'brand', header: 'Marca' },
-  { key: 'category_id', header: 'Categoría' },
+  { key: 'name', header: 'Nombre', align: 'left' },
+  { key: 'brand', header: 'Marca', align: 'left' },
+  { key: 'category_id', header: 'Categoría', align: 'left' },
   {
     key: 'price',
     header: 'Precio',
+    align: 'right',
     render: (r) => `${Number(r.price).toFixed(2)} €`,
   },
 ]
@@ -126,7 +128,8 @@ export default function Productos() {
             </button>
           )}
           {can('products.create') && (
-            <button onClick={openCreate} className={btnPrimary}>
+            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+              <Plus className="h-4 w-4" />
               Nuevo producto
             </button>
           )}
