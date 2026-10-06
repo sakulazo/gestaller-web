@@ -101,7 +101,7 @@ export default function Productos() {
       return v || null
     }
     saveMutate({
-      name: String(form.get('name') ?? ''),
+      name: String(form.get('name') ?? '').trim(),
       description: str('description'),
       brand: str('brand'),
       category_id: Number(form.get('category_id')),

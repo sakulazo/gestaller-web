@@ -69,11 +69,19 @@ export type ServiceSchemaValues = z.input<typeof serviceSchema>
 
 // ---------- Productos ----------
 export const productSchema = z.object({
-  name: z.string().min(1, 'El nombre es obligatorio'),
-  description: z.string().nullable().optional(),
-  brand: z.string().nullable().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'El nombre es obligatorio')
+    .max(150, 'El nombre no puede superar 150 caracteres'),
+  description: z.string().trim().max(500, 'La descripción no puede superar 500 caracteres').nullable().optional(),
+  brand: z.string().trim().max(100, 'La marca no puede superar 100 caracteres').nullable().optional(),
   category_id: z.number().min(1, 'La categoria es obligatoria'),
-  price: z.number().min(0, 'El precio no puede ser negativo').default(0),
+  price: z
+    .number()
+    .min(0, 'El precio no puede ser negativo')
+    .max(99999999.99, 'El precio no puede superar 99999999.99')
+    .default(0),
   provider_ids: z.array(z.number()).optional(),
 })
 
