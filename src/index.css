@@ -6,6 +6,14 @@
   --breakpoint-lg: 1536px;
   --animate-fade-in: fade-in 0.2s ease-out;
   --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-slide-in-from-left: slide-in-from-left 0.2s ease-out;
+  /* Las de salida llevan `forwards`: el drawer se desmonta al terminar la
+     animación, y sin `fill-mode` el último frame devuelve el elemento a su
+     estado estático (panel en translateX(0), overlay a opacidad 1) justo antes
+     del unmount. Ese frame es el parpadeo. `forwards` mantiene el frame final
+     hasta que React lo quita. */
+  --animate-fade-out: fade-out 0.15s ease-in forwards;
+  --animate-slide-out-to-left: slide-out-to-left 0.15s ease-in forwards;
   --text-page-title: clamp(1rem, calc(0.773rem + 1.136vw), 1.5rem);
   --text-page-title--line-height: calc(2 / 1.5);
   --text-page-title-xl: clamp(0.833rem, calc(0.631rem + 0.947vw), 1.25rem);
@@ -15,6 +23,23 @@
 @keyframes fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Drawer móvil: entra avanzando hacia la derecha (desde el borde izquierdo) y
+   sale de vuelta hacia la izquierda, en la dirección en la que ha venido. */
+@keyframes slide-in-from-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes slide-out-to-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
 }
 
 @keyframes scale-in {

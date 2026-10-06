@@ -1,6 +1,6 @@
 // Layout principal con barra lateral de navegación agrupada por funcionalidad.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   Building,
@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { drawerReducer } from '../lib/drawer'
 import Brand from './Brand'
 import DemoBanner from './DemoBanner'
 
@@ -92,7 +93,7 @@ export default function Layout() {
   const { user, logout, can, getPermissionsForRoute } = useAuth()
   const navigate = useNavigate()
   const [openSections, setOpenSections] = useState<string[]>([])
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [drawer, dispatchDrawer] = useReducer(drawerReducer, 'closed')
   const [openSection, setOpenSection] = useState<{
     title: string
     source: 'hover' | 'click' | 'focus'
@@ -104,6 +105,10 @@ export default function Layout() {
     logout()
     navigate('/login')
   }
+
+  const closing = drawer === 'closing'
+
+  const closeDrawer = () => dispatchDrawer('close')
 
   useEffect(() => {
     if (openSection === null) return
@@ -166,7 +171,7 @@ export default function Layout() {
         end={item.end}
         className={linkClass}
         onClick={() => {
-          setMobileOpen(false)
+          closeDrawer()
           setOpenSection(null)
           setOpenSections([])
         }}
@@ -209,7 +214,7 @@ export default function Layout() {
       <header className="flex w-full bg-slate-900 text-slate-100">
         <div className="relative flex flex-1 items-center gap-3 px-4 py-3">
           <button
-            onClick={() => setMobileOpen(true)}
+            onClick={() => dispatchDrawer('open')}
             aria-label="Abrir menú"
             className="sm:hidden"
           >
@@ -315,17 +320,30 @@ export default function Layout() {
         </div>
       </nav>
 
-      {mobileOpen && (
+      {drawer !== 'closed' && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="animate-fade-in absolute inset-0 bg-black/50"
-            onClick={() => setMobileOpen(false)}
+            className={`absolute inset-0 bg-black/50 ${
+              closing ? 'animate-fade-out' : 'animate-fade-in'
+            }`}
+            onClick={closeDrawer}
           />
-          <aside className="animate-scale-in absolute inset-y-0 left-0 flex w-64 flex-col bg-slate-900 text-slate-100 shadow-xl">
+          <aside
+            className={`absolute inset-y-0 left-0 flex w-64 flex-col bg-slate-900 text-slate-100 shadow-xl ${
+              closing
+                ? 'pointer-events-none animate-slide-out-to-left'
+                : 'animate-slide-in-from-left'
+            }`}
+            /* `target === currentTarget` evita que una animación de un hijo
+               termine el cierre antes de tiempo. */
+            onAnimationEnd={(e) => {
+              if (e.target === e.currentTarget) dispatchDrawer('animationend')
+            }}
+          >
             <div className="flex items-center gap-3 px-4 py-4">
               <Brand withWordmark className="flex-1 text-lg" />
               <button
-                onClick={() => setMobileOpen(false)}
+                onClick={closeDrawer}
                 aria-label="Cerrar menú"
                 className="text-slate-400 hover:text-white"
               >
