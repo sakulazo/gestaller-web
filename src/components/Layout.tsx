@@ -23,6 +23,7 @@ import {
   Settings,
   ShieldCheck,
   Truck,
+  User,
   UserCog,
   Users,
   Wrench,
@@ -102,6 +103,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const [openSections, setOpenSections] = useState<string[]>([])
   const [drawer, dispatchDrawer] = useReducer(drawerReducer, 'closed')
+  const [userPanel, dispatchUserPanel] = useReducer(drawerReducer, 'closed')
   const [openSection, setOpenSection] = useState<{
     title: string
     source: 'hover' | 'click' | 'focus'
@@ -140,6 +142,22 @@ export default function Layout() {
   const closing = drawer === 'closing'
 
   const closeDrawer = () => dispatchDrawer('close')
+
+  const userPanelClosing = userPanel === 'closing'
+
+  const closeUserPanel = () => dispatchUserPanel('close')
+
+  // Escape cierra el panel de usuario y el drawer móvil si están visibles.
+  useEffect(() => {
+    if (userPanel === 'closed' && drawer === 'closed') return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (userPanel !== 'closed') dispatchUserPanel('close')
+      if (drawer !== 'closed') dispatchDrawer('close')
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [userPanel, drawer])
 
   useEffect(() => {
     if (openSection === null) return
@@ -258,26 +276,77 @@ export default function Layout() {
           <div className="flex flex-1 items-center justify-end gap-3">
             <p className="hidden truncate text-sm sm:block">{user?.name}</p>
             <button
-              onClick={() => {
-                resetErrors()
-                setPwModal(true)
-              }}
-              aria-label="Cambiar contraseña"
-              title="Cambiar contraseña"
+              onClick={() => dispatchUserPanel('open')}
+              aria-label="Menú de usuario"
+              aria-expanded={userPanel !== 'closed'}
+              title="Menú de usuario"
               className="text-slate-400 hover:text-white"
             >
-              <KeyRound className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleLogout}
-              aria-label="Cerrar sesión"
-              className="text-slate-400 hover:text-white"
-            >
-              <LogOut className="h-5 w-5" />
+              <User className="h-5 w-5" />
             </button>
           </div>
         </div>
       </header>
+
+      {userPanel !== 'closed' && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className={`absolute inset-0 bg-black/50 ${
+              userPanelClosing ? 'animate-fade-out' : 'animate-fade-in'
+            }`}
+            onClick={closeUserPanel}
+          />
+          <aside
+            className={`absolute inset-y-0 right-0 flex w-64 flex-col bg-slate-900 text-slate-100 shadow-xl ${
+              userPanelClosing
+                ? 'pointer-events-none animate-slide-out-to-right'
+                : 'animate-slide-in-from-right'
+            }`}
+            /* Igual que el drawer móvil: la guarda evita que una animación de un
+               hijo termine el cierre antes de tiempo. */
+            onAnimationEnd={(e) => {
+              if (e.target === e.currentTarget) dispatchUserPanel('animationend')
+            }}
+          >
+            <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{user?.name}</p>
+                <p className="truncate text-xs text-slate-400">{user?.email}</p>
+              </div>
+              <button
+                onClick={closeUserPanel}
+                aria-label="Cerrar menú de usuario"
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 space-y-1 px-2 py-2">
+              <button
+                onClick={() => {
+                  closeUserPanel()
+                  resetErrors()
+                  setPwModal(true)
+                }}
+                className="flex w-full items-center gap-3 rounded px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                <KeyRound className="h-4 w-4 shrink-0 opacity-70" />
+                Cambiar contraseña
+              </button>
+              <button
+                onClick={() => {
+                  closeUserPanel()
+                  handleLogout()
+                }}
+                className="flex w-full items-center gap-3 rounded px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                <LogOut className="h-4 w-4 shrink-0 opacity-70" />
+                Cerrar sesión
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
 
       <Modal
         open={pwModal}

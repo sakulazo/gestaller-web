@@ -14,10 +14,10 @@
      hasta que React lo quita. */
   --animate-fade-out: fade-out 0.15s ease-in forwards;
   --animate-slide-out-to-left: slide-out-to-left 0.15s ease-in forwards;
-  --text-page-title: clamp(1rem, calc(0.773rem + 1.136vw), 1.5rem);
+  --animate-slide-in-from-right: slide-in-from-right 0.2s ease-out;
+  --animate-slide-out-to-right: slide-out-to-right 0.15s ease-in forwards;
+  --text-page-title: 1.5rem;
   --text-page-title--line-height: calc(2 / 1.5);
-  --text-page-title-xl: clamp(0.833rem, calc(0.631rem + 0.947vw), 1.25rem);
-  --text-page-title-xl--line-height: calc(1.75 / 1.25);
 }
 
 @keyframes fade-in {
@@ -40,6 +40,19 @@
 @keyframes slide-out-to-left {
   from { transform: translateX(0); }
   to   { transform: translateX(-100%); }
+}
+
+/* Panel de usuario (derecha): entra avanzando hacia la izquierda (desde el
+   borde derecho) y sale de vuelta a la derecha, en la dirección en la que ha
+   venido. La de salida lleva `forwards` por el mismo motivo que la del drawer. */
+@keyframes slide-in-from-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes slide-out-to-right {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
 }
 
 @keyframes scale-in {

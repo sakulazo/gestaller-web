@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { FieldError, FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
@@ -149,22 +150,24 @@ export default function Vehiculos() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Vehículos</h1>
-        <div className="flex gap-2">
-          {can('vehicle_categories.view') && (
-            <button onClick={() => navigate('/vehicle-categories')} className={btnGhost}>
-              Gestionar categorías
-            </button>
-          )}
-          {can('vehicles.create') && (
-            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
-              <Plus className="h-4 w-4" />
-              Nuevo vehículo
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Vehículos"
+        actions={
+          <>
+            {can('vehicle_categories.view') && (
+              <button onClick={() => navigate('/vehicle-categories')} className={btnGhost}>
+                Gestionar categorías
+              </button>
+            )}
+            {can('vehicles.create') && (
+              <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+                <Plus className="h-4 w-4" />
+                Nuevo vehículo
+              </button>
+            )}
+          </>
+        }
+      />
 
       <input
         value={search}

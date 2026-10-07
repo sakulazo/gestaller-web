@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import ConfirmDialog from './ConfirmDialog'
 import DataTable, { type Column } from './DataTable'
 import Modal from './Modal'
+import PageHeader from './PageHeader'
 import { FormInput } from './Form'
 import { useToast } from './Toast'
 import { useFormMutation } from '../hooks/useFormMutation'
@@ -134,14 +135,16 @@ export default function CategoryManager({
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
-        {can(createPermission) && (
-          <button onClick={openCreate} className={btnPrimary}>
-            Nueva categoría
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title={title}
+        actions={
+          can(createPermission) ? (
+            <button onClick={openCreate} className={btnPrimary}>
+              Nueva categoría
+            </button>
+          ) : null
+        }
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>

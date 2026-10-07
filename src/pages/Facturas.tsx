@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import DataTable, { type Column } from '../components/DataTable'
 import InvoiceFormModal from '../components/InvoiceFormModal'
 import InvoiceViewModal from '../components/InvoiceViewModal'
+import PageHeader from '../components/PageHeader'
 import { useAuth } from '../hooks/useAuth'
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import { btnPrimary } from '../components/ui'
@@ -73,15 +74,17 @@ export default function Facturas() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Facturas</h1>
-        {can('invoices.create') && (
-          <button onClick={() => setModalOpen(true)} className={`${btnPrimary} inline-flex items-center gap-2`}>
-            <Plus className="h-4 w-4" />
-            Nueva factura
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Facturas"
+        actions={
+          can('invoices.create') ? (
+            <button onClick={() => setModalOpen(true)} className={`${btnPrimary} inline-flex items-center gap-2`}>
+              <Plus className="h-4 w-4" />
+              Nueva factura
+            </button>
+          ) : null
+        }
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>

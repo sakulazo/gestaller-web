@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { FieldError, FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
@@ -125,22 +126,24 @@ export default function Productos() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Productos</h1>
-        <div className="flex gap-2">
-          {can('product_categories.view') && (
-            <button onClick={() => navigate('/product-categories')} className={btnGhost}>
-              Gestionar categorías
-            </button>
-          )}
-          {can('products.create') && (
-            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
-              <Plus className="h-4 w-4" />
-              Nuevo producto
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Productos"
+        actions={
+          <>
+            {can('product_categories.view') && (
+              <button onClick={() => navigate('/product-categories')} className={btnGhost}>
+                Gestionar categorías
+              </button>
+            )}
+            {can('products.create') && (
+              <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+                <Plus className="h-4 w-4" />
+                Nuevo producto
+              </button>
+            )}
+          </>
+        }
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>

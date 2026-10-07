@@ -1,6 +1,7 @@
 // Dashboard con indicadores según los permisos del usuario.
 
 import { useQuery } from '@tanstack/react-query'
+import PageHeader from '../components/PageHeader'
 import { useAuth } from '../hooks/useAuth'
 import { getActivity, getDashboard } from '../services'
 import type { DashboardReport } from '../types'
@@ -39,7 +40,7 @@ export default function Dashboard() {
   if (!hasCards && !hasActivity) {
     return (
       <div>
-        <h1 className="mb-6 text-page-title font-bold text-slate-800">Dashboard</h1>
+        <PageHeader title="Dashboard" />
         <p className="text-slate-500">Sin permisos para mostrar indicadores</p>
       </div>
     )
@@ -47,7 +48,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="mb-6 text-page-title font-bold text-slate-800">Dashboard</h1>
+      <PageHeader title="Dashboard" />
 
       {hasCards && dashboard.isLoading && <p className="text-slate-500">Cargando…</p>}
       {hasCards && dashboard.isError && (

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { FieldError, FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
@@ -58,9 +59,7 @@ export default function Settings() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Ajustes</h1>
-      </div>
+      <PageHeader title="Ajustes" />
 
       {isFetching ? (
         <p className="text-slate-500">Cargando…</p>

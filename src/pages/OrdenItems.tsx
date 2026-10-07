@@ -8,6 +8,7 @@ import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
+import PageHeader from '../components/PageHeader'
 import SearchSelect from '../components/SearchSelect'
 import { btnGhost, inputCls } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -571,14 +572,10 @@ export default function OrdenItems({
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          {!embedded && (
-            <h1 className="text-page-title font-bold text-slate-800">
-              Líneas de la orden {order.number}
-            </h1>
-          )}
-          <p className={`text-sm text-slate-500 ${embedded ? '' : 'mt-1'}`}>
+      <PageHeader
+        title={embedded ? undefined : `Líneas de la orden ${order.number}`}
+        subtitle={
+          <>
             {order.client_name ?? `Cliente ${order.client_id}`}
             {' · '}
             {order.motor_plate ?? order.motor_vehicle?.plate ?? '—'}
@@ -591,19 +588,21 @@ export default function OrdenItems({
             >
               {orderStatusLabels[order.derived_status] ?? order.derived_status}
             </span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-slate-600">
-            Tiempo total: <strong>{total} min</strong>
-          </p>
-          {!embedded && (
-            <button type="button" onClick={close} className={btnGhost}>
-              Volver a órdenes
-            </button>
-          )}
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <p className="text-sm text-slate-600">
+              Tiempo total: <strong>{total} min</strong>
+            </p>
+            {!embedded && (
+              <button type="button" onClick={close} className={btnGhost}>
+                Volver a órdenes
+              </button>
+            )}
+          </>
+        }
+      />
 
       {!canModify && (
         <p className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">

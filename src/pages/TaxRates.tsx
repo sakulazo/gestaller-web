@@ -7,6 +7,7 @@ import Checkbox from '../components/Checkbox'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { FieldError, FormInput } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
@@ -110,15 +111,17 @@ export default function TaxRates() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Tasas de IVA</h1>
-        {can('tax_rates.create') && (
-          <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
-            <Plus className="h-4 w-4" />
-            Nueva tasa
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Tasas de IVA"
+        actions={
+          can('tax_rates.create') ? (
+            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+              <Plus className="h-4 w-4" />
+              Nueva tasa
+            </button>
+          ) : null
+        }
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>

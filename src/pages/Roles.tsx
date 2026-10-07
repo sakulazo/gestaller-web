@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { FormInput } from '../components/Form'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../components/Toast'
@@ -199,20 +200,22 @@ export default function Roles() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Roles</h1>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => navigate('/users')} className={btnGhost}>
-            Volver a usuarios
-          </button>
-          {can('roles.create') && (
-            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
-              <Plus className="h-4 w-4" />
-              Nuevo rol
+      <PageHeader
+        title="Roles"
+        actions={
+          <>
+            <button type="button" onClick={() => navigate('/users')} className={btnGhost}>
+              Volver a usuarios
             </button>
-          )}
-        </div>
-      </div>
+            {can('roles.create') && (
+              <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+                <Plus className="h-4 w-4" />
+                Nuevo rol
+              </button>
+            )}
+          </>
+        }
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>

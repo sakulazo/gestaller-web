@@ -1,6 +1,7 @@
 // Reportes: facturación mensual y actividad.
 
 import { useQuery } from '@tanstack/react-query'
+import PageHeader from '../components/PageHeader'
 import { useAuth } from '../hooks/useAuth'
 import { getActivity, getMonthlyBilling } from '../services'
 
@@ -18,7 +19,7 @@ export default function Reportes() {
 
   return (
     <div>
-      <h1 className="mb-6 text-page-title font-bold text-slate-800">Reportes</h1>
+      <PageHeader title="Reportes" />
 
       <h2 className="mb-3 text-lg font-semibold text-slate-700">
         Facturación mensual

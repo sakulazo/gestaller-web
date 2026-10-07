@@ -8,6 +8,7 @@ import DataTable, { type Column } from '../components/DataTable'
 import ConfirmDialog from '../components/ConfirmDialog'
 import InvoiceFormModal from '../components/InvoiceFormModal'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { useAuth } from '../hooks/useAuth'
 import SearchSelect from '../components/SearchSelect'
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
@@ -313,20 +314,22 @@ export default function Ordenes() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Órdenes de trabajo</h1>
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigate('/work-orders/history')} className={btnGhost}>
-            Histórico
-          </button>
-          {can('work_orders.create') && (
-            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
-              <Plus className="h-4 w-4" />
-              Nueva orden
+      <PageHeader
+        title="Órdenes de trabajo"
+        actions={
+          <>
+            <button onClick={() => navigate('/work-orders/history')} className={btnGhost}>
+              Histórico
             </button>
-          )}
-        </div>
-      </div>
+            {can('work_orders.create') && (
+              <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+                <Plus className="h-4 w-4" />
+                Nueva orden
+              </button>
+            )}
+          </>
+        }
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>

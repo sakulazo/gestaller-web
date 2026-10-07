@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { btnGhost, inputCls } from '../components/ui'
 import { useNavigate } from 'react-router-dom'
 import { listWorkOrderHistory, unarchiveWorkOrder } from '../services'
@@ -319,12 +320,14 @@ export default function HistoricoOrdenes() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Histórico de órdenes</h1>
-        <button type="button" onClick={() => navigate('/work-orders')} className={btnGhost}>
-          Volver a órdenes
-        </button>
-      </div>
+      <PageHeader
+        title="Histórico de órdenes"
+        actions={
+          <button type="button" onClick={() => navigate('/work-orders')} className={btnGhost}>
+            Volver a órdenes
+          </button>
+        }
+      />
 
       <input
         value={search}

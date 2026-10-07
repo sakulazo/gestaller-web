@@ -3,6 +3,7 @@
 import { type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FormField, FormInput } from '../components/Form'
+import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
 import { useFormMutation } from '../hooks/useFormMutation'
@@ -54,10 +55,10 @@ export default function PerfilTaller() {
 
   return (
     <div>
-      <h1 className="mb-1 text-page-title font-bold text-slate-800">Datos del taller</h1>
-      <p className="mb-6 text-sm text-slate-500">
-        Datos fiscales y de contacto del taller para su uso futuro en presupuestos y facturas.
-      </p>
+      <PageHeader
+        title="Datos del taller"
+        subtitle="Datos fiscales y de contacto del taller para su uso futuro en presupuestos y facturas."
+      />
 
       {query.isLoading ? (
         <p className="text-slate-500">Cargando…</p>

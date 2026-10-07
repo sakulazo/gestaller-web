@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { FormInput, FormPassword } from '../components/Form'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../hooks/useAuth'
@@ -139,22 +140,24 @@ export default function Usuarios() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Usuarios</h1>
-        <div className="flex gap-2">
-          {getPermissionsForRoute('/roles').some(can) && (
-            <button onClick={() => navigate('/roles')} className={btnGhost}>
-              Gestionar roles
-            </button>
-          )}
-          {can('users.create') && (
-            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
-              <Plus className="h-4 w-4" />
-              Nuevo usuario
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Usuarios"
+        actions={
+          <>
+            {getPermissionsForRoute('/roles').some(can) && (
+              <button onClick={() => navigate('/roles')} className={btnGhost}>
+                Gestionar roles
+              </button>
+            )}
+            {can('users.create') && (
+              <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+                <Plus className="h-4 w-4" />
+                Nuevo usuario
+              </button>
+            )}
+          </>
+        }
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>

@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
+import PageHeader from '../components/PageHeader'
 import { useAuth } from '../hooks/useAuth'
 import ItemsForm, { itemTotal } from '../components/ItemsForm'
 import SearchSelect from '../components/SearchSelect'
@@ -252,15 +253,17 @@ export default function Presupuestos() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-page-title font-bold text-slate-800">Presupuestos</h1>
-        {can('quotes.create') && (
-          <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
-            <Plus className="h-4 w-4" />
-            Nuevo presupuesto
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Presupuestos"
+        actions={
+          can('quotes.create') ? (
+            <button onClick={openCreate} className={`${btnPrimary} inline-flex items-center gap-2`}>
+              <Plus className="h-4 w-4" />
+              Nuevo presupuesto
+            </button>
+          ) : null
+        }
+      />
 
       {isLoading ? (
         <p className="text-slate-500">Cargando…</p>
