@@ -45,6 +45,11 @@ Toda respuesta de error sigue este formato y la aplicación **se basa en los có
 - Los errores se detectan por `code` y campos estructurados, nunca por el texto de `message`.
 - Ningún componente interpreta un `AxiosError` directamente: siempre pasa por `toApplicationError`.
 
+## 5. Casos particulares
+
+- **Cuenta de mantenimiento (`is_superuser`)**: el backend responde `FORBIDDEN` (403) ante cualquier intento de editar, borrar o restaurar un superusuario. La SPA ya lo anticipa: `src/pages/Usuarios.tsx` abre esa fila en modo solo lectura (sin contraseña, roles, «Activo» ni «Eliminar»).
+- **Cambio de contraseña (`POST /auth/change-password`)**: la contraseña actual incorrecta responde `VALIDATION_ERROR` (422) con `fields.current_password`, que `useFormMutation` pinta junto al campo. Un 401 aquí sería contraproducente: el interceptor lo trataría como token expirado y haría un refresh + reintento espurios.
+
 ---
 
 Ver `backend/docs/error-policy.md` para la implementación canónica (reglas de seguridad, `AppError`, casos particulares y ejemplos).

@@ -135,6 +135,17 @@ export const userUpdateSchema = z.object({
 export type UserCreateSchemaValues = z.input<typeof userCreateSchema>
 export type UserUpdateSchemaValues = z.input<typeof userUpdateSchema>
 
+// Cambio de contraseña por el propio usuario (autocambio).
+export const passwordChangeSchema = z.object({
+  current_password: z.string().min(1, 'La contraseña actual es obligatoria'),
+  new_password: z
+    .string()
+    .min(8, 'La contrasena debe tener al menos 8 caracteres')
+    .max(72, 'La contrasena no puede superar 72 caracteres'),
+})
+
+export type PasswordChangeSchemaValues = z.input<typeof passwordChangeSchema>
+
 // ---------- Roles ----------
 export const roleSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),

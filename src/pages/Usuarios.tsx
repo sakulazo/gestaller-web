@@ -18,7 +18,21 @@ import { userCreateSchema, userUpdateSchema } from '../lib/validation'
 import type { User, UserInput } from '../types'
 
 const columns: Column<User>[] = [
-  { key: 'username', header: 'Usuario', align: 'left' },
+  {
+    key: 'username',
+    header: 'Usuario',
+    align: 'left',
+    render: (u) => (
+      <span className="inline-flex items-center gap-2">
+        {u.username}
+        {u.is_superuser && (
+          <span className="rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">
+            Mantenimiento
+          </span>
+        )}
+      </span>
+    ),
+  },
   { key: 'name', header: 'Nombre', align: 'left' },
   {
     key: 'email',
@@ -92,6 +106,7 @@ export default function Usuarios() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (editing?.is_superuser) return
     const form = new FormData(e.currentTarget)
     const role_ids = form.getAll('role_ids').map((v) => Number(v))
     const password = String(form.get('password') ?? '')
@@ -162,6 +177,40 @@ export default function Usuarios() {
           resetErrors()
         }}
       >
+        {editing?.is_superuser ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Cuenta de mantenimiento protegida: no se puede modificar, desactivar
+              ni eliminar. Su contraseña solo se cambia desde el menú de usuario
+              («Cambiar contraseña»).
+            </div>
+            <div>
+              <span className={labelCls}>Usuario</span>
+              <p className="text-sm text-slate-700">{editing.username}</p>
+            </div>
+            <div>
+              <span className={labelCls}>Nombre</span>
+              <p className="text-sm text-slate-700">{editing.name}</p>
+            </div>
+            <div className="col-span-2">
+              <span className={labelCls}>Email</span>
+              <p className="text-sm text-slate-700">{editing.email}</p>
+            </div>
+            <div>
+              <span className={labelCls}>Roles</span>
+              <p className="text-sm text-slate-700">{editing.roles.join(', ') || '—'}</p>
+            </div>
+            <div>
+              <span className={labelCls}>Activo</span>
+              <p className="text-sm text-slate-700">{editing.is_active ? 'Sí' : 'No'}</p>
+            </div>
+            <div className="col-span-2 flex justify-end">
+              <button type="button" onClick={() => setModalOpen(false)} className={btnGhost}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} noValidate className="grid grid-cols-2 gap-4">
           <FormInput
             name="username"
@@ -238,6 +287,7 @@ export default function Usuarios() {
             </div>
           </div>
         </form>
+        )}
       </Modal>
       <ConfirmDialog
         open={pendingDelete}

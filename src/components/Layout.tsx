@@ -13,6 +13,7 @@ import {
   FileText,
   Hammer,
   HandCoins,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -29,9 +30,16 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { useFormMutation } from '../hooks/useFormMutation'
 import { drawerReducer } from '../lib/drawer'
+import { passwordChangeSchema } from '../lib/validation'
+import * as authService from '../services/auth'
 import Brand from './Brand'
 import DemoBanner from './DemoBanner'
+import { FormPassword } from './Form'
+import Modal from './Modal'
+import { useToast } from './Toast'
+import { btnGhost, btnSuccess } from './ui'
 
 interface NavItem {
   to: string
@@ -104,6 +112,29 @@ export default function Layout() {
   const handleLogout = () => {
     logout()
     navigate('/login')
+  }
+
+  const [pwModal, setPwModal] = useState(false)
+  const toast = useToast()
+  const { mutate: changeMutate, isPending, fieldErrors, generalError, resetErrors } =
+    useFormMutation<{ status: string }, { current_password: string; new_password: string }>({
+      mutationFn: (vars) => authService.changePassword(vars.current_password, vars.new_password),
+      schema: passwordChangeSchema,
+      onSuccess: () => {
+        setPwModal(false)
+        // El backend revoca los refresh tokens: las demás sesiones mueren y la
+        // propia caducará al expirar el access token (habrá que volver a entrar).
+        toast.success('Contraseña actualizada. Se han cerrado las demás sesiones.')
+      },
+    })
+
+  const handleChangePassword = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    changeMutate({
+      current_password: String(form.get('current_password') ?? ''),
+      new_password: String(form.get('new_password') ?? ''),
+    })
   }
 
   const closing = drawer === 'closing'
@@ -227,6 +258,17 @@ export default function Layout() {
           <div className="flex flex-1 items-center justify-end gap-3">
             <p className="hidden truncate text-sm sm:block">{user?.name}</p>
             <button
+              onClick={() => {
+                resetErrors()
+                setPwModal(true)
+              }}
+              aria-label="Cambiar contraseña"
+              title="Cambiar contraseña"
+              className="text-slate-400 hover:text-white"
+            >
+              <KeyRound className="h-5 w-5" />
+            </button>
+            <button
               onClick={handleLogout}
               aria-label="Cerrar sesión"
               className="text-slate-400 hover:text-white"
@@ -236,6 +278,55 @@ export default function Layout() {
           </div>
         </div>
       </header>
+
+      <Modal
+        open={pwModal}
+        title="Cambiar contraseña"
+        onClose={() => {
+          setPwModal(false)
+          resetErrors()
+        }}
+      >
+        <form onSubmit={handleChangePassword} noValidate className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <FormPassword
+              name="current_password"
+              label="Contraseña actual"
+              required
+              error={fieldErrors.current_password}
+            />
+          </div>
+          <div className="col-span-2">
+            <FormPassword
+              name="new_password"
+              label="Contraseña nueva"
+              required
+              minLength={8}
+              error={fieldErrors.new_password}
+            />
+          </div>
+          {generalError && (
+            <p className="col-span-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {generalError}
+            </p>
+          )}
+          <div className="col-span-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setPwModal(false)
+                resetErrors()
+              }}
+              className={btnGhost}
+            >
+              Cancelar
+            </button>
+            <button type="submit" disabled={isPending} className={btnSuccess}>
+              {isPending ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <nav
         ref={tabletNavRef}

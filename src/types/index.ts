@@ -33,6 +33,7 @@ export interface User extends Base {
   email: string
   name: string
   is_active: boolean
+  is_superuser: boolean
   roles: string[]
   permissions: string[]
 }
