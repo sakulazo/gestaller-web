@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Archive, BadgeCheck, Ban, KeyRound, ListPlus, LogIn, Plus, Printer, Receipt, RotateCcw, Save, X } from 'lucide-react'
 import DataTable, { type Column } from '../components/DataTable'
 import ConfirmDialog from '../components/ConfirmDialog'
 import InvoiceFormModal from '../components/InvoiceFormModal'
@@ -103,6 +103,12 @@ export default function Ordenes() {
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+
+  const refreshDetail = () => {
+    if (editing == null) return
+    queryClient.invalidateQueries({ queryKey: ['work-order', editing.id] })
+    void editingOrderQuery.refetch()
+  }
 
   const checkInMutation = useMutation({
     mutationFn: checkInWorkOrder,
@@ -346,6 +352,17 @@ export default function Ordenes() {
       <Modal
         open={modalOpen}
         title={editing ? `Seguimiento de orden ${editing.number}` : 'Nueva orden'}
+        subtitle={
+          editing && liveOrder?.derived_status ? (
+            <span
+              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                statusColors[liveOrder.derived_status] ?? 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {statusLabels[liveOrder.derived_status] ?? liveOrder.derived_status}
+            </span>
+          ) : null
+        }
         onClose={() => { setModalOpen(false); setEditing(null); resetErrors() }}
       >
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -514,16 +531,14 @@ export default function Ordenes() {
                   {(editingOrderQuery.data?.items.length ?? editing.items.length) === 1 ? 'línea' : 'líneas'} · Tiempo:{' '}
                   <strong>{editingOrderQuery.data?.total ?? editing.total} min</strong>
                 </p>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Las líneas se gestionan desde su página propia.
-                </p>
               </div>
               {!isReadOnly && (
                 <button
                   type="button"
                   onClick={() => setItemsModalOpen(true)}
-                  className={btnPrimary}
+                  className={`${btnPrimary} inline-flex items-center justify-center gap-2`}
                 >
+                  <ListPlus className="h-4 w-4" />
                   Gestionar líneas
                 </button>
               )}
@@ -534,7 +549,8 @@ export default function Ordenes() {
             {editing && (
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 {can('work_orders.check_in') && liveStatus === 'abierta' && (
-                  <button type="button" onClick={() => checkInMutation.mutate(editing.id)} className="w-full rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500 sm:w-auto">
+                  <button type="button" onClick={() => checkInMutation.mutate(editing.id)} className="inline-flex w-full items-center justify-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500 sm:w-auto">
+                    <LogIn className="h-4 w-4" />
                     Ingresar vehículo/s
                   </button>
                 )}
@@ -542,8 +558,9 @@ export default function Ordenes() {
                   <button
                     type="button"
                     onClick={() => window.open(`/work-orders/${editing.id}/check-in`, '_blank')}
-                    className="w-full rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:w-auto"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:w-auto"
                   >
+                    <Printer className="h-4 w-4" />
                     Registro entrada
                   </button>
                 )}
@@ -551,13 +568,15 @@ export default function Ordenes() {
                   <button
                     type="button"
                     onClick={() => window.open(`/work-orders/${editing.id}/certificate`, '_blank')}
-                    className="w-full rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:w-auto"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:w-auto"
                   >
+                    <BadgeCheck className="h-4 w-4" />
                     Certificado estancia
                   </button>
                 )}
                 {can('work_orders.deliver') && (liveStatus === 'completada' || liveStatus === 'cancelada') && (
-                  <button type="button" onClick={() => deliverMutation.mutate(editing.id)} className="w-full rounded bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500 sm:w-auto">
+                  <button type="button" onClick={() => deliverMutation.mutate(editing.id)} className="inline-flex w-full items-center justify-center gap-2 rounded bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500 sm:w-auto">
+                    <KeyRound className="h-4 w-4" />
                     Entregar vehículo/s
                   </button>
                 )}
@@ -565,34 +584,40 @@ export default function Ordenes() {
                   <button
                     type="button"
                     onClick={() => setInvoiceModalOpen(true)}
-                    className="w-full rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 sm:w-auto"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 sm:w-auto"
                   >
+                    <Receipt className="h-4 w-4" />
                     Facturar
                   </button>
                 )}
                 {can('work_orders.cancel') && (liveStatus === 'abierta' || liveStatus === 'en_progreso') && (
-                  <button type="button" onClick={() => setCancelTarget(editing)} className="w-full rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 sm:w-auto">
+                  <button type="button" onClick={() => setCancelTarget(editing)} className="inline-flex w-full items-center justify-center gap-2 rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 sm:w-auto">
+                    <Ban className="h-4 w-4" />
                     Cancelar orden
                   </button>
                 )}
                 {can('work_orders.reactivate') && liveStatus === 'cancelada' && (
-                  <button type="button" onClick={() => reactivateMutation.mutate(editing.id)} className="w-full rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 sm:w-auto">
+                  <button type="button" onClick={() => reactivateMutation.mutate(editing.id)} className="inline-flex w-full items-center justify-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 sm:w-auto">
+                    <RotateCcw className="h-4 w-4" />
                     Reactivar
                   </button>
                 )}
                 {can('work_orders.archive') && liveOrder?.delivered_at && (
-                  <button type="button" onClick={() => archiveMutation.mutate(editing.id)} className="w-full rounded border border-amber-300 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 sm:w-auto">
+                  <button type="button" onClick={() => archiveMutation.mutate(editing.id)} className="inline-flex w-full items-center justify-center gap-2 rounded border border-amber-300 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 sm:w-auto">
+                    <Archive className="h-4 w-4" />
                     Archivar
                   </button>
                 )}
               </div>
             )}
             <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
-              <button type="button" onClick={() => setModalOpen(false)} className={`${btnGhost} w-full sm:w-auto`}>
+              <button type="button" onClick={() => setModalOpen(false)} className={`${btnGhost} inline-flex w-full items-center justify-center gap-2 sm:w-auto`}>
+                <X className="h-4 w-4" />
                 Cerrar
               </button>
               {!isReadOnly && (
-                <button type="submit" disabled={isPending} className={`${btnSuccess} w-full sm:w-auto`}>
+                <button type="submit" disabled={isPending} className={`${btnSuccess} inline-flex w-full items-center justify-center gap-2 sm:w-auto`}>
+                  <Save className="h-4 w-4" />
                   {isPending ? 'Guardando…' : 'Guardar'}
                 </button>
               )}
@@ -607,12 +632,18 @@ export default function Ordenes() {
           stacked
           wide
           title={`Líneas de la orden ${editing.number}`}
-          onClose={() => setItemsModalOpen(false)}
+          onClose={() => {
+            setItemsModalOpen(false)
+            refreshDetail()
+          }}
         >
           <OrdenItems
             workOrderId={editing.id}
             embedded
-            onClose={() => setItemsModalOpen(false)}
+            onClose={() => {
+              setItemsModalOpen(false)
+              refreshDetail()
+            }}
           />
         </Modal>
       )}
