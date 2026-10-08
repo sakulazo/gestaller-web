@@ -1,7 +1,7 @@
 // Facturas (listado y creación con líneas; las emitidas no se modifican).
 
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Printer } from 'lucide-react'
 import DataTable, { type Column } from '../components/DataTable'
 import InvoiceFormModal from '../components/InvoiceFormModal'
 import InvoiceViewModal from '../components/InvoiceViewModal'
@@ -32,15 +32,23 @@ export default function Facturas() {
     { key: 'client', header: 'Cliente', render: (f) => f.client_name ?? f.client?.name ?? '—' },
     {
       key: 'motor_vehicle_id',
-      header: 'Vehículos',
+      header: 'Vehículo',
       render: (f) => {
-        const plates: string[] = []
-        const motor = f.motor_plate ?? f.motor_vehicle?.plate
-        const trailer = f.trailer_plate ?? f.trailer_vehicle?.plate
-        if (motor) plates.push(motor)
-        if (trailer) plates.push(trailer)
-        return plates.length ? plates.join(' — ') : '—'
+        const motor = f.motor_plate ?? f.motor_vehicle?.plate ?? '—'
+        const trailer = f.trailer_plate ?? f.trailer_vehicle?.plate ?? null
+        return (
+          <div>
+            <div>{motor}</div>
+            {trailer && <div className="text-xs font-normal text-slate-400 sm:hidden">{trailer}</div>}
+          </div>
+        )
       },
+    },
+    {
+      key: 'trailer_vehicle_id',
+      header: 'Remolque',
+      className: 'hidden sm:table-cell',
+      render: (f) => f.trailer_plate ?? f.trailer_vehicle?.plate ?? '—',
     },
     {
       key: 'work_order_number',
@@ -48,13 +56,10 @@ export default function Facturas() {
       render: (f) => f.work_order_number ?? '—',
     },
     {
-      key: 'mileage',
-      header: 'Kilometraje',
-      render: (f) => f.mileage != null ? `${f.mileage.toLocaleString('es-ES')} km` : '—',
-    },
-    {
       key: 'total',
       header: 'Total',
+      align: 'right',
+      className: 'whitespace-nowrap',
       render: (f) => `${Number(f.total).toFixed(2)} €`,
     },
     {
@@ -64,8 +69,9 @@ export default function Facturas() {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); window.open(`/invoices/${f.id}/print`, '_blank') }}
-            className="rounded border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 rounded border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
           >
+            <Printer className="h-3.5 w-3.5" />
             Imprimir
           </button>
         ),
