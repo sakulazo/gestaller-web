@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, Printer } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
@@ -186,26 +186,19 @@ export default function Presupuestos() {
   }
 
   const columns: Column<Quote>[] = [
-    { key: 'number', header: 'Número' },
+    { key: 'number', header: 'Número', align: 'left' },
     {
       key: 'client_name',
       header: 'Cliente',
+      align: 'left',
       render: (p) => p.client_name ?? `Cliente ${p.client_id}`,
     },
     {
       key: 'motor_vehicle_id',
-      header: 'Vehículo a motor',
+      header: 'Vehículo',
       render: (p) => {
-        const motor = p.motor_make
-          ? `${p.motor_plate} — ${p.motor_make} ${p.motor_model ?? ''}`.trim()
-          : p.motor_vehicle
-            ? vehicleLabel(p.motor_vehicle)
-            : '—'
-        const trailer = p.trailer_make
-          ? `${p.trailer_plate} — ${p.trailer_make} ${p.trailer_model ?? ''}`.trim()
-          : p.trailer_vehicle
-            ? vehicleLabel(p.trailer_vehicle)
-            : p.trailer_plate ?? null
+        const motor = p.motor_plate ?? p.motor_vehicle?.plate ?? '—'
+        const trailer = p.trailer_plate ?? p.trailer_vehicle?.plate ?? null
         return (
           <div>
             <div>{motor}</div>
@@ -218,12 +211,7 @@ export default function Presupuestos() {
       key: 'trailer_vehicle_id',
       header: 'Remolque',
       className: 'hidden sm:table-cell',
-      render: (p) => (p.trailer_make ? `${p.trailer_plate} — ${p.trailer_make} ${p.trailer_model ?? ''}`.trim() : p.trailer_vehicle ? vehicleLabel(p.trailer_vehicle) : '—'),
-    },
-    {
-      key: 'mileage',
-      header: 'Kilometraje',
-      render: (p) => p.mileage != null ? `${p.mileage.toLocaleString('es-ES')} km` : '—',
+      render: (p) => p.trailer_plate ?? p.trailer_vehicle?.plate ?? '—',
     },
     {
       key: 'status',
@@ -233,9 +221,10 @@ export default function Presupuestos() {
     {
       key: 'total',
       header: 'Total',
+      align: 'right',
+      className: 'whitespace-nowrap',
       render: (p) => `${Number(p.total).toFixed(2)} €`,
     },
-    { key: 'valid_until', header: 'Válido hasta' },
     {
       key: 'print',
       header: '',
@@ -243,8 +232,9 @@ export default function Presupuestos() {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); window.open(`/quotes/${p.id}/print`, '_blank') }}
-          className="rounded border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center gap-1.5 rounded border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
         >
+          <Printer className="h-3.5 w-3.5" />
           Imprimir
         </button>
       ),
@@ -460,7 +450,8 @@ export default function Presupuestos() {
             {editing && (
               <div className="flex gap-2">
                 {can('quotes.view') && (
-                  <button type="button" onClick={() => window.open(`/quotes/${editing.id}/print`, '_blank')} className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                  <button type="button" onClick={() => window.open(`/quotes/${editing.id}/print`, '_blank')} className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                    <Printer className="h-4 w-4" />
                     Imprimir
                   </button>
                 )}
