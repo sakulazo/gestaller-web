@@ -38,7 +38,7 @@ export default function TaxRates() {
     usePaginatedQuery<TaxRate>(['tax-rates'], listTaxRates)
 
   const columns: Column<TaxRate>[] = useMemo(() => [
-    { key: 'name', header: 'Nombre' },
+    { key: 'name', header: 'Nombre', align: 'left' },
     {
       key: 'rate',
       header: 'Tasa',
