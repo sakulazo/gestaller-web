@@ -46,9 +46,9 @@ export default function Settings() {
   })
 
   const columns: Column<SystemParameter>[] = [
+    { key: 'description', header: 'Descripción' },
     { key: 'key', header: 'Clave' },
     { key: 'value', header: 'Valor' },
-    { key: 'description', header: 'Descripción' },
   ]
 
   const openEdit = (p: SystemParameter) => {
