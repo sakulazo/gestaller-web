@@ -24,10 +24,10 @@ import { providerSchema } from '../lib/validation'
 import type { Provider } from '../types'
 
 const columns: Column<Provider>[] = [
-  { key: 'name', header: 'Nombre' },
-  { key: 'tax_id', header: 'NIF' },
+  { key: 'name', header: 'Nombre', align: 'left' },
   { key: 'phone', header: 'Teléfono' },
-  { key: 'email', header: 'Email' },
+  { key: 'email', header: 'Email', align: 'left' },
+  { key: 'tax_id', header: 'NIF' },
 ]
 
 export default function Proveedores() {
