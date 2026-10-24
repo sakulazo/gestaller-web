@@ -4,6 +4,7 @@
 
 import type { ReactNode } from 'react'
 import type { ItemInput, ItemType, Product, Service, TaxRate } from '../types'
+import { formatCents, lineCents, normalizeMoneyInput } from '../lib/money'
 import SearchSelect from './SearchSelect'
 import { btnGhost, inputCls } from './ui'
 
@@ -22,26 +23,29 @@ function toNumber(value: FormDataEntryValue | null): number {
   return Number.isFinite(n) ? n : 0
 }
 
-export function lineTotal(item: ItemInput): number {
-  return item.quantity * item.unit_price * (1 - item.discount / 100)
+export function lineTotalCents(item: ItemInput): number {
+  return lineCents(item.quantity, item.unit_price, item.discount)
 }
 
-export function itemTotal(items: ItemInput[]): number {
-  return items.reduce((acc, it) => acc + lineTotal(it), 0)
+export function itemTotalCents(items: ItemInput[]): number {
+  return items.reduce((acc, it) => acc + lineTotalCents(it), 0)
 }
 
-export function lineTax(item: ItemInput, taxRates?: TaxRate[]): number {
+export function lineTaxCents(item: ItemInput, taxRates?: TaxRate[]): number {
   const rate = (taxRates ?? []).find((r) => r.id === item.tax_rate_id)
   if (!rate) return 0
-  return lineTotal(item) * (Number(rate.rate) / 100)
+  const base = lineTotalCents(item)
+  const rateNum = Number(rate.rate)
+  // half-up entero: base * tasa% / 100
+  return Math.floor((base * rateNum + 50) / 100)
 }
 
-export function itemTax(items: ItemInput[], taxRates?: TaxRate[]): number {
-  return items.reduce((acc, it) => acc + lineTax(it, taxRates), 0)
+export function itemTaxCents(items: ItemInput[], taxRates?: TaxRate[]): number {
+  return items.reduce((acc, it) => acc + lineTaxCents(it, taxRates), 0)
 }
 
-export function itemGrandTotal(items: ItemInput[], taxRates?: TaxRate[]): number {
-  return itemTotal(items) + itemTax(items, taxRates)
+export function itemGrandTotalCents(items: ItemInput[], taxRates?: TaxRate[]): number {
+  return itemTotalCents(items) + itemTaxCents(items, taxRates)
 }
 
 export function getDefaultTaxRateId(taxRates?: TaxRate[]): number | null {
@@ -68,7 +72,7 @@ const newItem = (item_type: ItemType): ItemInput => ({
   assigned_to: null,
   description: '',
   quantity: 1,
-  unit_price: 0,
+  unit_price: '0',
   discount: 0,
   duration_minutes: null,
   tax_rate_id: null,
@@ -101,7 +105,7 @@ export default function ItemsForm({
     update(index, {
       service_id: id,
       description: service ? service.name : '',
-      unit_price: service ? Number(service.price) : 0,
+      unit_price: service ? service.price : '0',
       tax_rate_id: items[index].tax_rate_id ?? defaultTaxRateId,
     })
   }
@@ -111,7 +115,7 @@ export default function ItemsForm({
     update(index, {
       product_id: id,
       description: product ? product.name : '',
-      unit_price: product ? Number(product.price) : 0,
+      unit_price: product ? product.price : '0',
       tax_rate_id: items[index].tax_rate_id ?? defaultTaxRateId,
     })
   }
@@ -150,13 +154,12 @@ export default function ItemsForm({
   const priceField = (item: ItemInput, index: number): ReactNode => (
     <div className="relative w-full">
       <input
-        type="number"
-        min={0}
-        step="0.01"
+        type="text"
+        inputMode="decimal"
         disabled={disabled}
         className={`${inputCls} w-full pr-5`}
         value={item.unit_price}
-        onChange={(e) => update(index, { unit_price: toNumber(e.target.value) })}
+        onChange={(e) => update(index, { unit_price: normalizeMoneyInput(e.target.value) })}
       />
       <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">€</span>
     </div>
@@ -241,7 +244,7 @@ export default function ItemsForm({
                 )}
                 <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
                   <span className="text-xs text-slate-500">Subtotal</span>
-                  <span className="font-medium text-slate-700">{lineTotal(item).toFixed(2)} €</span>
+                  <span className="font-medium text-slate-700">{formatCents(lineTotalCents(item))}</span>
                 </div>
               </div>
             ))}
@@ -275,7 +278,7 @@ export default function ItemsForm({
                   <td className="min-w-[120px] px-3 py-3">{discountField(item, idx)}</td>
                   {showTaxRate && <td className="min-w-[120px] px-3 py-3">{taxField(item, idx)}</td>}
                   <td className="min-w-[120px] px-3 py-3 text-right font-medium text-slate-700">
-                    {lineTotal(item).toFixed(2)} €
+                    {formatCents(lineTotalCents(item))}
                   </td>
                   <td className="w-16 px-3 py-3 text-right">
                     {!disabled && (

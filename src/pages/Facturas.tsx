@@ -1,4 +1,5 @@
 // Facturas (listado y creación con líneas; las emitidas no se modifican).
+import { formatMoney } from '../lib/money'
 
 import { useState } from 'react'
 import { Plus, Printer } from 'lucide-react'
@@ -60,7 +61,7 @@ export default function Facturas() {
       header: 'Total',
       align: 'right',
       className: 'whitespace-nowrap',
-      render: (f) => `${Number(f.total).toFixed(2)} €`,
+      render: (f) => `${formatMoney(f.total)}`,
     },
     {
       key: 'print',

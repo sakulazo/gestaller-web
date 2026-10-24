@@ -9,6 +9,7 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { formatMoney, lineCents } from '../lib/money'
 import { getCompanyProfile, getQuote } from '../services'
 import './invoice-print.css'
 
@@ -21,8 +22,8 @@ function formatDate(iso: string | null | undefined): string {
   return `${dd}/${mm}/${d.getFullYear()}`
 }
 
-function formatNumber(n: number): string {
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function formatNumber(n: string | number): string {
+  return formatMoney(n).replace(' €', '')
 }
 
 export default function QuotePrint() {
@@ -168,7 +169,7 @@ export default function QuotePrint() {
         </thead>
         <tbody>
           {quote.items.map((it, i) => {
-            const line = it.quantity * it.unit_price * (1 - it.discount / 100)
+            const line = lineCents(it.quantity, it.unit_price, it.discount) / 100
             return (
               <tr key={i}>
                 <td>{it.description ?? ''}</td>

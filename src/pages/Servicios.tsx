@@ -1,4 +1,5 @@
 // Catálogo de servicios (CRUD).
+import { formatMoney, normalizeMoneyInput } from '../lib/money'
 
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -63,7 +64,7 @@ export default function Servicios() {
       key: 'price',
       header: 'Precio',
       align: 'right',
-      render: (s) => `${Number(s.price).toFixed(2)} €`,
+      render: (s) => `${formatMoney(s.price)}`,
     },
     { key: 'duration_minutes', header: 'Duración (min)', align: 'center' },
   ], [categoryMap])
@@ -108,7 +109,7 @@ export default function Servicios() {
       name: String(form.get('name') ?? ''),
       description: String(form.get('description') ?? ''),
       category_id: Number(form.get('category_id')),
-      price: Number(form.get('price') ?? 0),
+      price: normalizeMoneyInput(String(form.get('price') ?? '')),
       duration_minutes: Number(form.get('duration_minutes') ?? 0),
     })
   }

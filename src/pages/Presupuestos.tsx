@@ -8,11 +8,12 @@ import DataTable, { type Column } from '../components/DataTable'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import { useAuth } from '../hooks/useAuth'
-import ItemsForm, { itemTotal } from '../components/ItemsForm'
+import ItemsForm, { itemTotalCents } from '../components/ItemsForm'
 import SearchSelect from '../components/SearchSelect'
 import { btnGhost, btnPrimary, btnSuccess, inputCls, labelCls } from '../components/ui'
 import { FieldError, FormTextarea } from '../components/Form'
 import { useToast } from '../components/Toast'
+import { formatCents, formatMoney } from '../lib/money'
 import { useFormMutation } from '../hooks/useFormMutation'
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery'
 import {
@@ -223,7 +224,7 @@ export default function Presupuestos() {
       header: 'Total',
       align: 'right',
       className: 'whitespace-nowrap',
-      render: (p) => `${Number(p.total).toFixed(2)} €`,
+      render: (p) => `${formatMoney(p.total)}`,
     },
     {
       key: 'print',
@@ -442,7 +443,7 @@ export default function Presupuestos() {
               disabled={isFrozen}
             />
             <p className="mt-2 text-sm text-slate-600">
-              Total estimado: <strong>{itemTotal(items).toFixed(2)} €</strong>
+              Total estimado: <strong>{formatCents(itemTotalCents(items))}</strong>
             </p>
           </div>
 

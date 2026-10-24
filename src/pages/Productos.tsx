@@ -1,4 +1,5 @@
 // Productos (catálogo de productos, CRUD).
+import { formatMoney, normalizeMoneyInput } from '../lib/money'
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -40,7 +41,7 @@ const baseColumns: Column<Product>[] = [
     key: 'price',
     header: 'Precio',
     align: 'right',
-    render: (r) => `${Number(r.price).toFixed(2)} €`,
+    render: (r) => `${formatMoney(r.price)}`,
   },
 ]
 
@@ -106,7 +107,7 @@ export default function Productos() {
       description: str('description'),
       brand: str('brand'),
       category_id: Number(form.get('category_id')),
-      price: Number(form.get('price') ?? 0),
+      price: normalizeMoneyInput(String(form.get('price') ?? '')),
       provider_ids: form.getAll('provider_ids').map((v) => Number(v)),
     })
   }

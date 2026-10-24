@@ -8,9 +8,9 @@ import Modal from '../components/Modal'
 import { useAuth } from '../hooks/useAuth'
 import ItemsForm, {
   getDefaultTaxRateId,
-  itemGrandTotal,
-  itemTax,
-  itemTotal,
+  itemGrandTotalCents,
+  itemTaxCents,
+  itemTotalCents,
 } from '../components/ItemsForm'
 import SearchSelect from '../components/SearchSelect'
 import { btnGhost, btnSuccess, inputCls, labelCls } from '../components/ui'
@@ -27,6 +27,7 @@ import {
   listVehicles,
   listWorkOrders,
 } from '../services'
+import { formatCents } from '../lib/money'
 import { invoiceSchema } from '../lib/validation'
 import type { Invoice, InvoiceInput, ItemInput, WorkOrder, WorkOrderItem } from '../types'
 
@@ -409,13 +410,13 @@ export default function InvoiceFormModal({
             />
             <p className="mt-2 space-x-4 text-sm text-slate-600">
               <span>
-                Base imponible: <strong>{itemTotal(items).toFixed(2)} €</strong>
+                Base imponible: <strong>{formatCents(itemTotalCents(items))}</strong>
               </span>
               <span>
-                IVA: <strong>{itemTax(items, taxRatesQuery.data).toFixed(2)} €</strong>
+                IVA: <strong>{formatCents(itemTaxCents(items, taxRatesQuery.data))}</strong>
               </span>
               <span>
-                Total de la factura: <strong>{itemGrandTotal(items, taxRatesQuery.data).toFixed(2)} €</strong>
+                Total de la factura: <strong>{formatCents(itemGrandTotalCents(items, taxRatesQuery.data))}</strong>
               </span>
             </p>
           </div>

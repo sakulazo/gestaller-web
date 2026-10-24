@@ -1,7 +1,8 @@
 // Modal de visualización (solo lectura) de una factura emitida.
 
 import Modal from './Modal'
-import { lineTotal } from '../components/ItemsForm'
+import { formatCents, formatMoney } from '../lib/money'
+import { lineTotalCents } from './ItemsForm'
 import type { Invoice, Item } from '../types'
 
 const formatDate = (iso: string): string => {
@@ -24,7 +25,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-const eur = (n: number) => `${Number(n).toFixed(2)} €`
+
 
 export default function InvoiceViewModal({
   invoice,
@@ -126,9 +127,9 @@ export default function InvoiceViewModal({
                       </td>
                       <td className="px-3 py-2">{it.description || '—'}</td>
                       <td className="px-3 py-2">{it.quantity}</td>
-                      <td className="px-3 py-2">{eur(it.unit_price)}</td>
+                      <td className="px-3 py-2">{formatMoney(it.unit_price)}</td>
                       <td className="px-3 py-2">{it.discount > 0 ? `${it.discount} %` : '—'}</td>
-                      <td className="px-3 py-2 text-right font-medium">{eur(lineTotal(it))}</td>
+                      <td className="px-3 py-2 text-right font-medium">{formatCents(lineTotalCents(it))}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -137,19 +138,19 @@ export default function InvoiceViewModal({
                     <td colSpan={5} className="px-3 py-2 text-right font-semibold">
                       Base imponible
                     </td>
-                    <td className="px-3 py-2 text-right">{eur(invoice.subtotal)}</td>
+                    <td className="px-3 py-2 text-right">{formatMoney(invoice.subtotal)}</td>
                   </tr>
                   <tr>
                     <td colSpan={5} className="px-3 py-2 text-right font-semibold">
                       IVA
                     </td>
-                    <td className="px-3 py-2 text-right">{eur(invoice.taxes)}</td>
+                    <td className="px-3 py-2 text-right">{formatMoney(invoice.taxes)}</td>
                   </tr>
                   <tr>
                     <td colSpan={5} className="px-3 py-2 text-right font-bold">
                       Total
                     </td>
-                    <td className="px-3 py-2 text-right font-bold">{eur(invoice.total)}</td>
+                    <td className="px-3 py-2 text-right font-bold">{formatMoney(invoice.total)}</td>
                   </tr>
                 </tfoot>
               </table>

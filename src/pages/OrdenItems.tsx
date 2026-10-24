@@ -64,7 +64,7 @@ const newItem = (item_type: ItemType): ItemInput => ({
   assigned_to: null,
   description: '',
   quantity: 1,
-  unit_price: 0,
+  unit_price: '0',
   discount: 0,
   duration_minutes: null,
   tax_rate_id: null,
@@ -121,7 +121,7 @@ function editorFields({
     onChange({
       [isService ? 'service_id' : 'product_id']: id,
       description: found ? found.name : '',
-      unit_price: found ? Number(found.price) : 0,
+      unit_price: found ? found.price : '0',
       duration_minutes:
         isService && found ? Number((found as Service).duration_minutes ?? 0) || null : null,
     })

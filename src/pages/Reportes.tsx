@@ -1,4 +1,5 @@
 // Reportes: facturación mensual y actividad.
+import { formatMoney } from '../lib/money'
 
 import { useQuery } from '@tanstack/react-query'
 import PageHeader from '../components/PageHeader'
@@ -30,7 +31,7 @@ export default function Reportes() {
             {facturacion.data.map((f) => (
               <li key={f.month} className="flex justify-between text-sm">
                 <span className="text-slate-600">{f.month}</span>
-                <span className="font-semibold">{Number(f.total).toFixed(2)} €</span>
+                <span className="font-semibold">{formatMoney(f.total)}</span>
               </li>
             ))}
           </ul>

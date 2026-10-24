@@ -8,6 +8,7 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { formatCents, formatMoney, lineCents } from '../lib/money'
 import { getCompanyProfile, getInvoice } from '../services'
 import './invoice-print.css'
 
@@ -20,8 +21,9 @@ function formatDate(iso: string | null | undefined): string {
   return `${dd}/${mm}/${d.getFullYear()}`
 }
 
-function formatNumber(n: number): string {
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function formatNumber(n: string | number): string {
+  // Importes de la API (string canónico o número legacy) sin el símbolo €.
+  return formatMoney(n).replace(' €', '')
 }
 
 export default function InvoicePrint() {
@@ -95,7 +97,7 @@ export default function InvoicePrint() {
     invoice.items.reduce((groups, it) => {
       const rate = it.tax_rate ?? null
       const key = rate == null ? 'null' : String(rate)
-      const line = it.quantity * it.unit_price * (1 - it.discount / 100)
+      const line = lineCents(it.quantity, it.unit_price, it.discount)
       const g = groups.get(key) ?? { base: 0, rate }
       g.base += line
       groups.set(key, g)
@@ -105,7 +107,8 @@ export default function InvoicePrint() {
     key,
     base: g.base,
     rate: g.rate,
-    iva: g.rate != null ? (g.base * g.rate) / 100 : 0,
+    // half-up entero sobre céntimos: reproduce el cálculo del backend
+    iva: g.rate != null ? Math.floor((g.base * g.rate + 50) / 100) : 0,
   }))
 
   return (
@@ -188,7 +191,7 @@ export default function InvoicePrint() {
         </thead>
         <tbody>
           {invoice.items.map((it, i) => {
-            const line = it.quantity * it.unit_price * (1 - it.discount / 100)
+            const line = lineCents(it.quantity, it.unit_price, it.discount)
             return (
               <tr key={i}>
                 <td>{it.description ?? ''}</td>
@@ -196,7 +199,7 @@ export default function InvoicePrint() {
                 <td className="ta-right">{formatNumber(it.unit_price)}</td>
                 <td className="ta-center">{it.discount ? `${it.discount} %` : '—'}</td>
                 <td className="ta-center">{it.tax_rate != null ? `${it.tax_rate}%` : '—'}</td>
-                <td className="ta-right">{formatNumber(line)} €</td>
+                <td className="ta-right">{formatCents(line)} €</td>
               </tr>
             )
           })}
@@ -214,10 +217,10 @@ export default function InvoicePrint() {
               <tr key={g.key}>
                 <td>
                   {g.rate != null
-                    ? `IVA ${g.rate}% de ${formatNumber(g.base)}`
-                    : `Sin IVA de ${formatNumber(g.base)}`}
+                    ? `IVA ${g.rate}% de ${formatCents(g.base)}`
+                    : `Sin IVA de ${formatCents(g.base)}`}
                 </td>
-                <td className="ta-right">{formatNumber(g.iva)} €</td>
+                <td className="ta-right">{formatCents(g.iva)} €</td>
               </tr>
             ))}
             <tr className="totals-strong totals-final">

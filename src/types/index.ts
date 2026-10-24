@@ -121,7 +121,7 @@ export interface Service extends Base {
   name: string
   description: string | null
   category_id: number
-  price: number
+  price: string
   duration_minutes: number | null
 }
 
@@ -135,7 +135,7 @@ export interface Product extends Base {
   description: string | null
   brand: string | null
   category_id: number
-  price: number
+  price: string
   provider_ids?: number[]
 }
 
@@ -188,7 +188,7 @@ export interface Item {
   assigned_to: number | null
   description: string | null
   quantity: number
-  unit_price: number
+  unit_price: string
   discount: number
   duration_minutes: number | null
   tax_rate_id: number | null
@@ -302,7 +302,7 @@ export interface Quote extends Base, ClientSnapshot, VehicleSnapshot {
   status: QuoteStatus
   description: string | null
   notes: string | null
-  total: number
+  total: string
   validity_days: number
   date: string
   valid_until: string
@@ -325,9 +325,9 @@ export interface Invoice
   quote_id: number | null
   status: InvoiceStatus
   notes: string | null
-  subtotal: number
-  taxes: number
-  total: number
+  subtotal: string
+  taxes: string
+  total: string
   date: string
   items: Item[]
   client: Client
@@ -340,12 +340,12 @@ export interface DashboardReport {
   clients: number
   vehicles: number
   open_orders: number
-  monthly_revenue: number
+  monthly_revenue: string
 }
 
 export interface MonthlyBilling {
   month: string
-  total: number
+  total: string
 }
 
 export interface ActivityReport {
@@ -399,7 +399,7 @@ export interface ServiceInput {
   name: string
   description?: string | null
   category_id: number
-  price?: number
+  price?: string
   duration_minutes?: number | null
 }
 
@@ -408,7 +408,7 @@ export interface ProductInput {
   description?: string | null
   brand?: string | null
   category_id: number
-  price?: number
+  price?: string
   provider_ids?: number[]
 }
 
