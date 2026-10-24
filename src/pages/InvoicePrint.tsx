@@ -93,23 +93,24 @@ export default function InvoicePrint() {
   }
   const hasTrailer = Boolean(invoice.trailer_plate || invoice.trailer_vehicle)
 
+  // IVA por tipo: se calcula POR LÍNEA (half-up en cada línea y luego suma),
+  // replicando la política del backend (app/services/invoice.py::_taxes).
+  // Calcularlo una sola vez sobre la base agregada difiere en céntimos.
   const taxGroups = Array.from(
-    invoice.items.reduce((groups, it) => {
-      const rate = it.tax_rate ?? null
-      const key = rate == null ? 'null' : String(rate)
-      const line = lineCents(it.quantity, it.unit_price, it.discount)
-      const g = groups.get(key) ?? { base: 0, rate }
-      g.base += line
-      groups.set(key, g)
-      return groups
-    }, new Map<string, { base: number; rate: number | null }>()),
-  ).map(([key, g]) => ({
-    key,
-    base: g.base,
-    rate: g.rate,
-    // half-up entero sobre céntimos: reproduce el cálculo del backend
-    iva: g.rate != null ? Math.floor((g.base * g.rate + 50) / 100) : 0,
-  }))
+    invoice.items
+      .reduce((groups, it) => {
+        const rate = it.tax_rate ?? null
+        const key = rate == null ? 'null' : String(rate)
+        const base = lineCents(it.quantity, it.unit_price, it.discount)
+        const iva = rate != null ? Math.floor((base * rate + 50) / 100) : 0
+        const g = groups.get(key) ?? { base: 0, iva: 0, rate }
+        g.base += base
+        g.iva += iva
+        groups.set(key, g)
+        return groups
+      }, new Map<string, { base: number; iva: number; rate: number | null }>())
+      .values(),
+  )
 
   return (
     <div className="print-screen">
@@ -199,7 +200,7 @@ export default function InvoicePrint() {
                 <td className="ta-right">{formatNumber(it.unit_price)}</td>
                 <td className="ta-center">{it.discount ? `${it.discount} %` : '—'}</td>
                 <td className="ta-center">{it.tax_rate != null ? `${it.tax_rate}%` : '—'}</td>
-                <td className="ta-right">{formatCents(line)} €</td>
+                <td className="ta-right">{formatCents(line)}</td>
               </tr>
             )
           })}
@@ -214,13 +215,13 @@ export default function InvoicePrint() {
               <td className="ta-right">{formatNumber(invoice.subtotal)} €</td>
             </tr>
             {taxGroups.map((g) => (
-              <tr key={g.key}>
+              <tr key={g.rate ?? 'sin-iva'}>
                 <td>
                   {g.rate != null
                     ? `IVA ${g.rate}% de ${formatCents(g.base)}`
                     : `Sin IVA de ${formatCents(g.base)}`}
                 </td>
-                <td className="ta-right">{formatCents(g.iva)} €</td>
+                <td className="ta-right">{formatCents(g.iva)}</td>
               </tr>
             ))}
             <tr className="totals-strong totals-final">
