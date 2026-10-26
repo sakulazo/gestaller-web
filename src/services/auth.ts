@@ -10,7 +10,7 @@ export interface LoginResponse {
 }
 
 export async function login(username: string, password: string): Promise<LoginResponse> {
-  const body = new URLSearchParams({ username, password })
+  const body = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
   const { data } = await api.post<LoginResponse>('/auth/login', body, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })

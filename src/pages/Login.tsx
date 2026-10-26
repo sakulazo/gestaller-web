@@ -48,6 +48,10 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
+      if (!username || !password) {
+        setError('Introduce usuario y contraseña')
+        return
+      }
       await login(username, password)
       navigate('/')
     } catch (err) {
