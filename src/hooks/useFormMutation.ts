@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from 'react'
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'
+import { emitToast } from '../components/Toast'
+import { fieldsMatchPayload } from '../lib/formErrors'
 import { toApplicationError } from '../types/errors'
 import type { ZodSchema } from 'zod'
 
@@ -69,6 +71,12 @@ export function useFormMutation<TData, TVariables>({
 
         if (appErr.fields && Object.keys(appErr.fields).length > 0) {
           setFieldErrors(appErr.fields)
+          // Si ninguna clave corresponde al payload, no habrá error inline:
+          // avisa con toast para que el usuario nunca vea un fallo mudo.
+          if (!fieldsMatchPayload(appErr.fields, vars)) {
+            setGeneralError(appErr.message)
+            emitToast('error', appErr.message)
+          }
         } else if (appErr.code !== 'VALIDATION_ERROR') {
           setGeneralError(appErr.message)
         }
