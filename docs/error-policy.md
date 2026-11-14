@@ -27,6 +27,7 @@ Toda respuesta de error sigue este formato y la aplicación **se basa en los có
 | `VALIDATION_ERROR` | 422 | Con `fields` → errores junto a los campos del formulario (`useFormMutation`). Sin `fields` → toast de error. |
 | `AUTHENTICATION_REQUIRED` | 401 | El interceptor de axios intenta un refresh (una vez, con cola concurrente) o cierra sesión y redirige a `/login`. |
 | `FORBIDDEN` | 403 | Página `SinAcceso` (vía `RequirePermission`/`can()`); las queries de soporte con 403 se silencian para no emitir toasts espurios. |
+| `TENANT_SUSPENDED` | 403 | El taller está suspendido (ADR-016): se cierra sesión, se limpia el token y se redirige a `/login` con el mensaje del backend. |
 | `NOT_FOUND` | 404 | Página `NotFound` en navegación; recurso inexistente en lista/detalle → toast global de la query. |
 | `CONFLICT` | 409 | Con `deleted_id` → diálogo de restaurar. Sin `deleted_id` → toast. |
 | `RATE_LIMITED` | 429 | Toast. |

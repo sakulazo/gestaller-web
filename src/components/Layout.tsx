@@ -275,6 +275,11 @@ export default function Layout() {
           />
           <div className="flex flex-1 items-center justify-end gap-3">
             <p className="hidden truncate text-sm sm:block">{user?.name}</p>
+            {user?.tenant && (
+              <p className="hidden truncate text-xs text-slate-400 md:block">
+                {user.tenant.name}
+              </p>
+            )}
             <button
               onClick={() => dispatchUserPanel('open')}
               aria-label="Menú de usuario"

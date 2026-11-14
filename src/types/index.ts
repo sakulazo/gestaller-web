@@ -28,6 +28,13 @@ export interface Base {
   updated_at: string
 }
 
+export interface Tenant {
+  id: number
+  slug: string
+  name: string
+  status: string
+}
+
 export interface User extends Base {
   username: string
   email: string
@@ -36,6 +43,7 @@ export interface User extends Base {
   is_superuser: boolean
   roles: string[]
   permissions: string[]
+  tenant?: Tenant | null
 }
 
 export interface Role extends Base {

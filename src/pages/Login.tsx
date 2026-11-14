@@ -4,9 +4,10 @@
 // tarjeta del formulario a la derecha. Por debajo el panel se oculta y el logo
 // sube sobre la tarjeta, de modo que solo aparece una vez en cada tamaño.
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  Building2,
   CircleAlert,
   ClipboardList,
   Eye,
@@ -18,7 +19,7 @@ import {
   User,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
+import { LAST_TENANT_KEY, useAuth } from '../hooks/useAuth'
 import { toApplicationError } from '../types/errors'
 import Brand from '../components/Brand'
 import DemoBanner from '../components/DemoBanner'
@@ -37,22 +38,37 @@ const iconCls = 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const [tenant, setTenant] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Pre-rellenar taller desde localStorage al montar el componente (opcional)
+  useEffect(() => {
+    const savedTenant = localStorage.getItem(LAST_TENANT_KEY)
+    if (savedTenant) {
+      setTenant(savedTenant)
+    }
+    // Mensaje del backend para TENANT_SUSPENDED (ver services/api.ts).
+    const sessionError = sessionStorage.getItem('login_error')
+    if (sessionError) {
+      sessionStorage.removeItem('login_error')
+      setError(sessionError)
+    }
+  }, [])
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      if (!username || !password) {
-        setError('Introduce usuario y contraseña')
+      if (!tenant || !username || !password) {
+        setError('Introduce taller, usuario y contraseña')
         return
       }
-      await login(username, password)
+      await login(tenant, username, password)
       navigate('/')
     } catch (err) {
       const appErr = toApplicationError(err)
@@ -128,6 +144,32 @@ export default function Login() {
             </p>
 
             <div className="mt-7 space-y-5">
+              <div>
+                <label htmlFor="tenant" className={labelCls}>
+                  Taller
+                </label>
+                <div className="relative">
+                  <Building2 className={iconCls} aria-hidden="true" />
+                  <input
+                    id="tenant"
+                    name="tenant"
+                    type="text"
+                    autoComplete="organization"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    required
+                    value={tenant}
+                    onChange={(e) => {
+                      setTenant(e.target.value)
+                      setError('')
+                    }}
+                    {...errorProps}
+                    className={`${inputCls} pr-3`}
+                  />
+                </div>
+              </div>
+
               <div>
                 <label htmlFor="username" className={labelCls}>Usuario</label>
                 <div className="relative">

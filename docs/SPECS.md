@@ -78,13 +78,15 @@ Un fallo de conexión (sin respuesta HTTP) se tipa como `NETWORK_ERROR` y se mue
 
 ## 3. Autenticación y sesión
 
-- **Login** (`POST /api/auth/login`): guarda `access_token` en `gestaller_token`; pide `/api/auth/me` y guarda el usuario (con `roles` y `permissions`) en `gestaller_user` (JSON en localStorage).
+- **Login** (`POST /api/auth/login`): el formulario pide **taller (slug)**, usuario y contraseña; se envía como JSON `{"tenant", "username", "password"}`. Guarda `access_token` en `gestaller_token`; pide `/api/auth/me` y guarda el usuario (con `roles`, `permissions` y `tenant`) en `gestaller_user` (JSON en localStorage). El slug del taller se recuerda en `gestaller_tenant` (`LAST_TENANT_KEY`) para pre-rellenar el formulario; no es un secreto.
+- **Cambio de sesión**: al hacer login o logout se ejecuta `queryClient.clear()` (no solo dos claves): ningún listado o detalle del taller anterior puede sobrevivir en la caché de React Query.
 - **Refresh**: viaja por cookie httpOnly; no se guarda en localStorage. Manejado automáticamente por el interceptor (§2.2).
-- **Logout**: llama a `POST /api/auth/logout` y limpia `gestaller_token`/`gestaller_user` y el estado de contexto.
+- **Logout**: llama a `POST /api/auth/logout` y limpia `gestaller_token`/`gestaller_user`/`gestaller_tenant` y el estado de contexto, además de `queryClient.clear()`.
 - **Sesión viva**: al recuperar el foco de la ventana se re-valida `/api/auth/me` y se actualiza el usuario en cache.
-- **`useAuth()`** (contexto `src/hooks/useAuth.tsx`) expone: `user`, `token`, `login`, `logout`, `can(code)`, `catalog`, `catalogReady`, `getPermissionsForRoute(route)`, `getModules()`.
+- **`useAuth()`** (contexto `src/hooks/useAuth.tsx`) expone: `user`, `token`, `login(tenant, username, password)`, `logout`, `can(code)`, `catalog`, `catalogReady`, `getPermissionsForRoute(route)`, `getModules()`.
   - `can(code)` = `user.permissions.includes(code)`.
   - `catalogReady` pasa a `true` cuando el catálogo de permisos terminó de cargar **con datos o con error** (un fallo de catálogo se trata como sin-permisos; nunca como "cargando" indefinido).
+- **Errores de taller**: `TENANT_SUSPENDED` (403) cierra sesión y redirige a `/login` con el mensaje del backend (la cabecera del layout muestra el nombre del taller que viene en `user.tenant`).
 
 ---
 

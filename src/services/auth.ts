@@ -9,10 +9,15 @@ export interface LoginResponse {
   token_type: string
 }
 
-export async function login(username: string, password: string): Promise<LoginResponse> {
-  const body = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-  const { data } = await api.post<LoginResponse>('/auth/login', body, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+export async function login(
+  tenant: string,
+  username: string,
+  password: string,
+): Promise<LoginResponse> {
+  const { data } = await api.post<LoginResponse>('/auth/login', {
+    tenant,
+    username,
+    password,
   })
   return data
 }

@@ -4,6 +4,7 @@ export type ErrorCode =
   | 'VALIDATION_ERROR'
   | 'AUTHENTICATION_REQUIRED'
   | 'FORBIDDEN'
+  | 'TENANT_SUSPENDED'
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'

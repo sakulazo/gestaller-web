@@ -90,6 +90,19 @@ api.interceptors.response.use(
       }
     }
 
+    // 403 TENANT_SUSPENDED → cerrar sesión y avisar (no es un problema de
+    // permisos del usuario: el taller está suspendido o archivado).
+    if (appErr.code === 'TENANT_SUSPENDED') {
+      // El mensaje del backend sobrevive al redirect en sesión (no localStorage).
+      sessionStorage.setItem('login_error', appErr.message)
+      localStorage.removeItem('gestaller_token')
+      localStorage.removeItem('gestaller_user')
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+      return Promise.reject(error)
+    }
+
     // Errores de campo (VALIDATION_ERROR con fields, o CONFLICT con deleted_id)
     if (
       (appErr.code === 'VALIDATION_ERROR' && appErr.fields) ||
