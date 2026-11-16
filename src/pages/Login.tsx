@@ -22,7 +22,7 @@ import type { LucideIcon } from 'lucide-react'
 import { LAST_TENANT_KEY, useAuth } from '../hooks/useAuth'
 import { toApplicationError } from '../types/errors'
 import Brand from '../components/Brand'
-import DemoBanner from '../components/DemoBanner'
+import { DEMO_PASSWORD, DEMO_TENANT, DEMO_USERNAME } from '../lib/demo'
 
 const highlights: { icon: LucideIcon; text: string }[] = [
   { icon: ClipboardList, text: 'Órdenes de trabajo, check-in y entrega' },
@@ -34,6 +34,22 @@ const labelCls = 'mb-1.5 block text-xs font-medium uppercase tracking-wide text-
 const inputCls =
   'w-full rounded-lg border border-slate-300 py-2.5 pl-10 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30'
 const iconCls = 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400'
+
+/** Aviso de la demo pública: solo se muestra al teclear el taller `demo`. */
+function DemoHint({ visible }: { visible: boolean }) {
+  if (!visible) return null
+  return (
+    <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <p>
+        <strong>Demo pública.</strong> Taller <code>{DEMO_TENANT}</code>, usuario{' '}
+        <code>{DEMO_USERNAME}</code> y contraseña <code>{DEMO_PASSWORD}</code>.
+      </p>
+      <p className="mt-1">
+        Los datos se reinician cada 6 horas; lo que crees aquí no se conserva.
+      </p>
+    </div>
+  )
+}
 
 export default function Login() {
   const { login } = useAuth()
@@ -127,9 +143,10 @@ export default function Login() {
             <Brand variant="on-dark" withWordmark symbolClassName="h-36" className="text-3xl" />
           </div>
 
-          {/* Aviso de demo: es lo primero que ve quien abre la demo, y el sitio
-              donde hay que decir que lo que cree no se conserva. */}
-          <DemoBanner />
+          {/* El aviso de la demo ya no se pinta siempre: la demo es un taller
+              más de producción. Aparece al escribir su slug, que es cuando
+              hace falta (credenciales fijas y cadencia del reset). */}
+          <DemoHint visible={tenant.trim().toLowerCase() === DEMO_TENANT} />
 
           <form
             onSubmit={handleSubmit}

@@ -1,7 +1,7 @@
-// Instante del próximo reinicio de la demo de Gestaller: el minuto 5 de cada hora
-// impar (01:05, 03:05, ... 23:05), que es lo que dispara
-// systemd/gestaller-demo-reset.timer en el VPS. Se calcula en el cliente porque el
-// horario es fijo y no hay nada que el servidor sepa y el cliente no.
+// Instante del próximo reinicio de la demo de Gestaller: el minuto 5 de las
+// 00:05, 06:05, 12:05 y 18:05, que es lo que dispara el timer del VPS
+// (`gestaller-demo-tenant-reset.timer`, cada 6 horas). Se calcula en el cliente porque
+// el horario es fijo y no hay nada que el servidor sepa y el cliente no.
 //
 // LA HORA ES LA DEL SERVIDOR, NO LA DEL NAVEGADOR.
 // El timer de systemd corre en la zona del VPS (Europe/Berlin, mismo offset que
@@ -14,7 +14,9 @@
 // equivoca por una hora justo ahí).
 
 const RESET_TIMEZONE = 'Europe/Madrid'
-const RESET_HOUR_STEP = 2
+// Horas del servidor en las que corre el reset (minuto 5). Tiene que coincidir
+// con `OnCalendar=` de infra-vps/systemd/gestaller-demo-tenant-reset.timer.
+const RESET_HOURS = [0, 6, 12, 18]
 const RESET_MINUTE = 5
 
 interface Reloj {
@@ -89,12 +91,14 @@ export function nextDemoReset(from: Date = new Date()): Date {
   const ahora = relojEnZonaReset(from)
   let hora = ahora.hour
 
-  // Pasado el minuto del reset, la hora impar de este mismo día ya no vale.
+  // Pasado el minuto del reset, la hora de este mismo día ya no vale.
   if (ahora.minute >= RESET_MINUTE) hora += 1
-  if (hora % RESET_HOUR_STEP === 0) hora += 1
+  // Siguiente hora de reset (00, 06, 12 o 18). El `% 24` cubre la medianoche:
+  // `hora` puede valer 24 y el objetivo es el 00:05 del día siguiente.
+  while (!RESET_HOURS.includes(hora % 24)) hora += 1
 
   // `Date.UTC` con hora 24 o mayor salta al día siguiente por su cuenta, que es
-  // lo que hace falta al pasar de las 23:05 a las 01:05.
+  // lo que hace falta al pasar de las 18:05 a las 00:05.
   const objetivo = Date.UTC(ahora.year, ahora.month - 1, ahora.day, hora, RESET_MINUTE)
 
   // Primera aproximación: se supone el offset que la zona tiene ahora mismo.
