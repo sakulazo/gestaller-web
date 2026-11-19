@@ -17,7 +17,7 @@ import { fetchPermissionCatalog } from '../services'
 interface AuthContextValue {
   user: User | null
   token: string | null
-  login: (tenant: string, username: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => void
   can: (permission: string) => boolean
   catalog: PermissionCatalog | null
@@ -31,8 +31,6 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 const TOKEN_KEY = 'gestaller_token'
 const USER_KEY = 'gestaller_user'
-/** Último taller usado, para pre-rellenar el login (no es un secreto). */
-export const LAST_TENANT_KEY = 'gestaller_tenant'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() =>
@@ -50,12 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
 
   const login = useCallback(
-    async (tenant: string, username: string, password: string) => {
-      const res = await authService.login(tenant, username, password)
+    async (email: string, password: string) => {
+      const res = await authService.login(email, password)
       localStorage.setItem(TOKEN_KEY, res.access_token)
       const me = await authService.fetchMe()
       localStorage.setItem(USER_KEY, JSON.stringify(me))
-      localStorage.setItem(LAST_TENANT_KEY, tenant)
       // Nunca reutilizar datos del taller de la sesión anterior.
       queryClient.clear()
       setToken(res.access_token)

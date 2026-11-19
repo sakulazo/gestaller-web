@@ -7,22 +7,21 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Building2,
   CircleAlert,
   ClipboardList,
   Eye,
   EyeOff,
   LoaderCircle,
   Lock,
+  Mail,
   ReceiptEuro,
   ShieldCheck,
-  User,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { LAST_TENANT_KEY, useAuth } from '../hooks/useAuth'
+import { useAuth } from '../hooks/useAuth'
 import { toApplicationError } from '../types/errors'
 import Brand from '../components/Brand'
-import { DEMO_PASSWORD, DEMO_TENANT, DEMO_USERNAME } from '../lib/demo'
+import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/demo'
 
 const highlights: { icon: LucideIcon; text: string }[] = [
   { icon: ClipboardList, text: 'Órdenes de trabajo, check-in y entrega' },
@@ -35,38 +34,18 @@ const inputCls =
   'w-full rounded-lg border border-slate-300 py-2.5 pl-10 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30'
 const iconCls = 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400'
 
-/** Aviso de la demo pública: solo se muestra al teclear el taller `demo`. */
-function DemoHint({ visible }: { visible: boolean }) {
-  if (!visible) return null
-  return (
-    <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      <p>
-        <strong>Demo pública.</strong> Taller <code>{DEMO_TENANT}</code>, usuario{' '}
-        <code>{DEMO_USERNAME}</code> y contraseña <code>{DEMO_PASSWORD}</code>.
-      </p>
-      <p className="mt-1">
-        Los datos se reinician cada 6 horas; lo que crees aquí no se conserva.
-      </p>
-    </div>
-  )
-}
-
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const [tenant, setTenant] = useState('')
-  const [username, setUsername] = useState('')
+  // El email identifica al usuario en toda la instalación y de él se deriva
+  // el taller (ADR-019): no hay campo Taller ni slug que enviar.
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Pre-rellenar taller desde localStorage al montar el componente (opcional)
   useEffect(() => {
-    const savedTenant = localStorage.getItem(LAST_TENANT_KEY)
-    if (savedTenant) {
-      setTenant(savedTenant)
-    }
     // Mensaje del backend para TENANT_SUSPENDED (ver services/api.ts).
     const sessionError = sessionStorage.getItem('login_error')
     if (sessionError) {
@@ -80,15 +59,29 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      if (!tenant || !username || !password) {
-        setError('Introduce taller, usuario y contraseña')
+      if (!email || !password) {
+        setError('Introduce email y contraseña')
         return
       }
-      await login(tenant, username, password)
+      await login(email, password)
       navigate('/')
     } catch (err) {
-      const appErr = toApplicationError(err)
-      setError(appErr.message)
+      setError(toApplicationError(err).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDemo = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      // Credenciales públicas del taller de demostración. El backend resuelve
+      // el taller por el email (ADR-019).
+      await login(DEMO_EMAIL, DEMO_PASSWORD)
+      navigate('/')
+    } catch (err) {
+      setError(toApplicationError(err).message)
     } finally {
       setLoading(false)
     }
@@ -143,11 +136,6 @@ export default function Login() {
             <Brand variant="on-dark" withWordmark symbolClassName="h-36" className="text-3xl" />
           </div>
 
-          {/* El aviso de la demo ya no se pinta siempre: la demo es un taller
-              más de producción. Aparece al escribir su slug, que es cuando
-              hace falta (credenciales fijas y cadencia del reset). */}
-          <DemoHint visible={tenant.trim().toLowerCase() === DEMO_TENANT} />
-
           <form
             onSubmit={handleSubmit}
             noValidate
@@ -157,53 +145,27 @@ export default function Login() {
               Iniciar sesión
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Accede con tu usuario del taller.
+              Accede con tu email y contraseña.
             </p>
 
             <div className="mt-7 space-y-5">
               <div>
-                <label htmlFor="tenant" className={labelCls}>
-                  Taller
-                </label>
+                <label htmlFor="email" className={labelCls}>Email</label>
                 <div className="relative">
-                  <Building2 className={iconCls} aria-hidden="true" />
+                  <Mail className={iconCls} aria-hidden="true" />
                   <input
-                    id="tenant"
-                    name="tenant"
-                    type="text"
-                    autoComplete="organization"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    required
-                    value={tenant}
-                    onChange={(e) => {
-                      setTenant(e.target.value)
-                      setError('')
-                    }}
-                    {...errorProps}
-                    className={`${inputCls} pr-3`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="username" className={labelCls}>Usuario</label>
-                <div className="relative">
-                  <User className={iconCls} aria-hidden="true" />
-                  <input
-                    id="username"
-                    name="username"
-                    type="text"
-                    autoComplete="username"
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
                     autoFocus
                     required
-                    value={username}
+                    value={email}
                     onChange={(e) => {
-                      setUsername(e.target.value)
+                      setEmail(e.target.value)
                       setError('')
                     }}
                     {...errorProps}
@@ -272,7 +234,15 @@ export default function Login() {
           </form>
 
           <p className="mt-6 text-center text-xs text-slate-500">
-            Acceso restringido a personal autorizado
+            Acceso restringido a personal autorizado ·{' '}
+            <button
+              type="button"
+              onClick={handleDemo}
+              disabled={loading}
+              className="font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 transition hover:text-amber-700 hover:decoration-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Probar la demo
+            </button>
           </p>
         </div>
       </main>

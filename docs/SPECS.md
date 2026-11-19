@@ -33,6 +33,7 @@ Toda respuesta de error de la API sigue este formato y la aplicación **se basa 
 | `VALIDATION_ERROR` | 422 | Con `fields` → errores junto a los campos. Sin `fields` → toast de error |
 | `AUTHENTICATION_REQUIRED` | 401 | Refresh automático (una vez) o cierre de sesión + redirección a `/login` |
 | `FORBIDDEN` | 403 | Página `SinAcceso` (vía `RequirePermission`) |
+| `TENANT_SUSPENDED` | 403 | Cierra sesión, limpia el token y redirige a `/login` con el mensaje del backend |
 | `NOT_FOUND` | 404 | Página `NotFound` (catch-all de rutas); recurso inexistente en lista/detalle → toast global |
 | `CONFLICT` | 409 | Con `deleted_id` → diálogo de restaurar. Sin `deleted_id` → toast |
 | `RATE_LIMITED` | 429 | Toast |
@@ -78,12 +79,12 @@ Un fallo de conexión (sin respuesta HTTP) se tipa como `NETWORK_ERROR` y se mue
 
 ## 3. Autenticación y sesión
 
-- **Login** (`POST /api/auth/login`): el formulario pide **taller (slug)**, usuario y contraseña; se envía como JSON `{"tenant", "username", "password"}`. Guarda `access_token` en `gestaller_token`; pide `/api/auth/me` y guarda el usuario (con `roles`, `permissions` y `tenant`) en `gestaller_user` (JSON en localStorage). El slug del taller se recuerda en `gestaller_tenant` (`LAST_TENANT_KEY`) para pre-rellenar el formulario; no es un secreto.
+- **Login** (`POST /api/auth/login`): el formulario pide **email y contraseña**; el email es único en toda la instalación y el taller se deriva de la cuenta (ADR-019). Guarda `access_token` en `gestaller_token`; pide `/api/auth/me` y guarda el usuario (con `roles`, `permissions` y `tenant`) en `gestaller_user` (JSON en localStorage). No hay campo «Taller» ni clave `gestaller_tenant`. El enlace «Probar la demo» entra con las credenciales públicas (`demo@example.com` / `demo12345`): el backend resuelve el taller (`demotaller` en desarrollo, `demo` en producción hasta la migración de ADR-018).
 - **Cambio de sesión**: al hacer login o logout se ejecuta `queryClient.clear()` (no solo dos claves): ningún listado o detalle del taller anterior puede sobrevivir en la caché de React Query.
 - **Refresh**: viaja por cookie httpOnly; no se guarda en localStorage. Manejado automáticamente por el interceptor (§2.2).
-- **Logout**: llama a `POST /api/auth/logout` y limpia `gestaller_token`/`gestaller_user`/`gestaller_tenant` y el estado de contexto, además de `queryClient.clear()`.
+- **Logout**: llama a `POST /api/auth/logout` y limpia `gestaller_token`/`gestaller_user` y el estado de contexto, además de `queryClient.clear()`.
 - **Sesión viva**: al recuperar el foco de la ventana se re-valida `/api/auth/me` y se actualiza el usuario en cache.
-- **`useAuth()`** (contexto `src/hooks/useAuth.tsx`) expone: `user`, `token`, `login(tenant, username, password)`, `logout`, `can(code)`, `catalog`, `catalogReady`, `getPermissionsForRoute(route)`, `getModules()`.
+- **`useAuth()`** (contexto `src/hooks/useAuth.tsx`) expone: `user`, `token`, `login(email, password)`, `logout`, `can(code)`, `catalog`, `catalogReady`, `getPermissionsForRoute(route)`, `getModules()`.
   - `can(code)` = `user.permissions.includes(code)`.
   - `catalogReady` pasa a `true` cuando el catálogo de permisos terminó de cargar **con datos o con error** (un fallo de catálogo se trata como sin-permisos; nunca como "cargando" indefinido).
 - **Errores de taller**: `TENANT_SUSPENDED` (403) cierra sesión y redirige a `/login` con el mensaje del backend (la cabecera del layout muestra el nombre del taller que viene en `user.tenant`).

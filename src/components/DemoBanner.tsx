@@ -1,18 +1,18 @@
 // Banner de la demo: aviso de que los datos se reinician, cuenta atrás y
 // credenciales de entrada. Se monta en Layout (sesión iniciada).
 //
-// Se muestra SOLO al taller `demo`, y se decide en tiempo de EJECUCIÓN por el
-// slug del taller de la sesión, no por el hostname ni por un flag de build: la
-// demo ya no es un despliegue aparte, es un tenant dentro de producción. Un
-// flag de construcción no serviría (los dos casos comparten bundle) y el
-// hostname tampoco (el dominio de la demo desapareció). El usuario lo trae
-// `/auth/me` y `useAuth` lo refresca.
+// Se muestra SOLO en un taller de demostración (`DEMO_TENANTS`), y se decide
+// en tiempo de EJECUCIÓN por el slug del taller de la sesión, no por el
+// hostname ni por un flag de build: la demo ya no es un despliegue aparte, es
+// un tenant dentro de producción. Un flag de construcción no serviría (los dos
+// casos comparten bundle) y el hostname tampoco (el dominio de la demo
+// desapareció). El usuario lo trae `/auth/me` y `useAuth` lo refresca.
 //
-// En el login no se pinta: sin sesión no hay taller que comprobar. Allí el
-// aviso aparece al escribir `demo` en el campo Taller (ver Login).
+// En el login no se pinta: sin sesión no hay taller que comprobar. Allí hay un
+// enlace «Probar la demo» que entra con las credenciales públicas (ver Login).
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { DEMO_PASSWORD, DEMO_TENANT, DEMO_USERNAME } from '../lib/demo'
+import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_TENANTS } from '../lib/demo'
 import { nextDemoReset } from '../lib/demoReset'
 
 function formatRemaining(ms: number): string {
@@ -25,7 +25,9 @@ function formatRemaining(ms: number): string {
 
 export default function DemoBanner() {
   const { user } = useAuth()
-  const esDemo = user?.tenant?.slug === DEMO_TENANT
+  const slug = user?.tenant?.slug
+  const tenantName = user?.tenant?.name ?? slug
+  const esDemo = slug ? (DEMO_TENANTS as readonly string[]).includes(slug) : false
   const [remaining, setRemaining] = useState(
     () => nextDemoReset().getTime() - Date.now(),
   )
@@ -72,8 +74,8 @@ export default function DemoBanner() {
         crees aquí no se conserva.
       </p>
       <p className="mt-1">
-        Entrar con <code>{DEMO_USERNAME}</code> / <code>{DEMO_PASSWORD}</code> (taller{' '}
-        <code>{DEMO_TENANT}</code>).
+        Entrar con <code>{DEMO_EMAIL}</code> / <code>{DEMO_PASSWORD}</code> (taller{' '}
+        <code>{tenantName}</code>).
       </p>
     </div>
   )

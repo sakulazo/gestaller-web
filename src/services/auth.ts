@@ -10,13 +10,11 @@ export interface LoginResponse {
 }
 
 export async function login(
-  tenant: string,
-  username: string,
+  email: string,
   password: string,
 ): Promise<LoginResponse> {
   const { data } = await api.post<LoginResponse>('/auth/login', {
-    tenant,
-    username,
+    email,
     password,
   })
   return data
