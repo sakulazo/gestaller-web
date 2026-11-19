@@ -38,11 +38,11 @@ que levante su propio servicio `api` no lo alcanza nadie. No reintroducir
 `docs/DEPLOY.md`.
 
 - El proxy de desarrollo apunta a `VITE_DEV_PROXY_TARGET` (por defecto `http://localhost:8000`; en Docker lo fija el compose a `http://api:8000`).
-- Credenciales seed (las siembra el backend): **admin@example.com / admin123** (gestión) y **demo@example.com / demo12345** (demo pública `demotaller`, «Talleres del Sur»; tras ADR-020 es la única demo en desarrollo y producción). Talleres de prueba del seed de desarrollo: **admin@prueba1.example.com / prueba12345** y **admin@prueba2.example.com / prueba12345**. El login es por email (ADR-019).
+- Credenciales seed (las siembra el backend): **admin@example.com / admin123** (gestión) y **demo@example.com / demo12345** (demo pública `demotaller`, «Talleres del Sur»; tras ADR-020 es la única demo en desarrollo y producción). Talleres de prueba del seed de desarrollo: **taller-prueba-1.owner@example.com / 12345678** y **taller-prueba-2.owner@example.com / 12345678** (ADR-021). El supervisor único, **supervisor@example.com / super12345**, solo existe en el taller real (`demotaller` en desarrollo, `default` en producción) y es la única cuenta que ve `/tenants`. El login es por email (ADR-019).
 
 ## Arquitectura
 
-- `src/pages/` — 26 páginas importadas en `App.tsx`: una por módulo (incluye `Settings` en `/settings`, `TaxRates`, `PerfilTaller`, `HistoricoOrdenes`) + 4 de impresión (factura, presupuesto, resguardo, certificado) + Login, Dashboard y NotFound.
+- `src/pages/` — 27 páginas importadas en `App.tsx`: una por módulo (incluye `Settings` en `/settings`, `TaxRates`, `PerfilTaller`, `HistoricoOrdenes` y `Tenants` en `/tenants`) + 4 de impresión (factura, presupuesto, resguardo, certificado) + Login, Dashboard y NotFound.
 - `src/components/` — Modal, DataTable, ItemsForm, CategoryManager, ConfirmDialog, SearchSelect, RequirePermission/ProtectedRoute, Toast, Form, Checkbox, ErrorBoundary, Brand, CarSilhouette.
 - `src/hooks/useAuth.tsx` — token en localStorage, refresh token en cookie httpOnly (`/api/auth`), catálogo de permisos y `catalogReady`; el login es email+contraseña y el taller se deriva de la cuenta (ADR-019).
 - `src/hooks/usePaginatedQuery.ts` — listados paginados server-side (page + search con debounce; `queryKey` comparte prefijo con el modo `all` para que `invalidateQueries` invalide ambos).
@@ -63,7 +63,7 @@ que levante su propio servicio `api` no lo alcanza nadie. No reintroducir
 ## Convenciones (obligatorias)
 
 - Errores de API según el contrato de `docs/error-policy.md` (código + mensaje + `fields`); el frontend nunca interpreta un fallo de query como lista vacía (`QueryCache.onError` global muestra toast).
-- **Permisos**: se consumen vía `GET /api/permissions/catalog` (fuente única: `seed_data/permissions.json` del backend). Añadir un permiso no requiere cambios en TS.
+- **Permisos**: se consumen vía `GET /api/permissions/catalog` (fuente única: `seed_data/permissions.json` del backend). Añadir un permiso no requiere cambios en TS. Los módulos `platform` (ADR-021, p. ej. `/tenants`) no los obtiene ningún rol de taller: `RequirePermission` los oculta salvo al supervisor.
 - Código e identificadores en inglés; mensajes de usuario visibles en español.
 - Las facturas no se eliminan ni se modifican tras emitirse (quedan invariables). Presupuesto convertido no mostrable como eliminable (`canDelete` por fila en DataTable).
 - Los ítems de documentos exigen exactamente un servicio o producto ("+ Añadir servicio" / "+ Añadir producto").
@@ -73,7 +73,7 @@ que levante su propio servicio `api` no lo alcanza nadie. No reintroducir
 
 ## Gotchas conocidos
 
-- Tests: hay `vitest` (`pnpm test`) pero la cobertura es **mínima**: `src/lib/demoReset.ts` (la cuenta atrás de la demo), `money.ts`, `drawer.ts` y `formErrors.ts`. Un módulo sin test sigue siendo el normal, no la excepción; si tocas lógica de cálculo (fechas, importes, agregados), añade el test en el mismo commit que el arreglo. Coherente con la regla de infra-vps de que un check nuevo tiene que tener un caso que lo haga fallar.
+- Tests: hay `vitest` (`pnpm test`) pero la cobertura es **mínima**: `src/lib/demoReset.ts` (la cuenta atrás de la demo), `money.ts`, `drawer.ts`, `formErrors.ts` y `tenantValidation.ts`. Un módulo sin test sigue siendo el normal, no la excepción; si tocas lógica de cálculo (fechas, importes, agregados), añade el test en el mismo commit que el arreglo. Coherente con la regla de infra-vps de que un check nuevo tiene que tener un caso que lo haga fallar.
 - La cuenta atrás de la demo (`src/lib/demoReset.ts`) calcula en la **zona del servidor**, no en la del navegador, y su objetivo es el minuto 5 de cada hora impar. Dos cosas que costan sangre y ya estan cubiertas por `src/lib/demoReset.test.ts`:
   - El offset de la zona se construye con los **mismos** campos que se leen del reloj (incluidos segundos y milisegundos). Truncar uno de los dos términos hace que el objetivo se desplace con el reloj en cada tick y el contador se quede clavado.
   - La recarga al reset se dispara por **cambio de objetivo**, nunca por `diff <= 0`: la función devuelve siempre un instante futuro, así que `diff` salta de ~0 a 2 h sin pasar por cero.

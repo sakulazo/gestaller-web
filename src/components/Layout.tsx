@@ -4,6 +4,7 @@ import { useEffect, useReducer, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   Building,
+  Building2,
   Boxes,
   Car,
   ChartColumn,
@@ -90,6 +91,7 @@ const navSections: NavSection[] = [
     icon: ShieldCheck,
     items: [
       { to: '/users', label: 'Usuarios', icon: UserCog },
+      { to: '/tenants', label: 'Gestión de talleres', icon: Building2 },
       { to: '/company-profile', label: 'Datos del taller', icon: Building },
       { to: '/tax-rates', label: 'Tasas de IVA', icon: Percent },
       { to: '/settings', label: 'Ajustes', icon: Settings },

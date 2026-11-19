@@ -118,6 +118,7 @@ motivos por los que no debe añadirse aquí un `docker-compose.prod.yml`, en
 | `/invoices` | Facturación |
 | `/products`, `/product-categories`, `/providers` | Recambios |
 | `/users`, `/roles` | Usuarios y roles (RBAC) |
+| `/tenants` | Plataforma (ADR-021): talleres y usuarios de cada taller; solo el supervisor |
 | `/reports` | Reportes (facturación y actividad) |
 | `/company-profile` | Perfil de taller |
 | `/tax-rates` | Tasas de IVA |

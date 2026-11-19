@@ -38,6 +38,7 @@ import Reportes from './pages/Reportes'
 import PerfilTaller from './pages/PerfilTaller'
 import TaxRates from './pages/TaxRates'
 import Settings from './pages/Settings'
+import Tenants from './pages/Tenants'
 import NotFound from './pages/NotFound'
 
 // Los errores de las queries (listados) se notifican de forma global:
@@ -91,6 +92,7 @@ export default function App() {
                   <Route path="/company-profile" element={<RequirePermission module="/company-profile"><PerfilTaller /></RequirePermission>} />
                   <Route path="/tax-rates" element={<RequirePermission module="/tax-rates"><TaxRates /></RequirePermission>} />
                   <Route path="/settings" element={<RequirePermission module="/settings"><Settings /></RequirePermission>} />
+                  <Route path="/tenants" element={<RequirePermission module="/tenants"><Tenants /></RequirePermission>} />
                   <Route path="/clientes" element={<Navigate to="/clients" replace />} />
                   <Route path="/vehiculos" element={<Navigate to="/vehicles" replace />} />
                   <Route path="/categorias-vehiculo" element={<Navigate to="/vehicle-categories" replace />} />

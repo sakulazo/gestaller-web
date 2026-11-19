@@ -33,6 +33,26 @@ export interface Tenant {
   slug: string
   name: string
   status: string
+  owner_email?: string | null
+  user_count?: number
+  created_at?: string
+}
+
+// Respuesta al crear un taller: credenciales del propietario (ADR-021).
+export interface TenantCreated {
+  tenant: Tenant
+  owner: {
+    username: string
+    name: string
+    email: string
+    password: string
+    role: string
+  }
+}
+
+export interface TenantInput {
+  name: string
+  slug?: string
 }
 
 export interface User extends Base {
@@ -41,6 +61,7 @@ export interface User extends Base {
   name: string
   is_active: boolean
   is_superuser: boolean
+  deleted_at?: string | null
   roles: string[]
   permissions: string[]
   tenant?: Tenant | null

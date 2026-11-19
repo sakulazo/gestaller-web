@@ -146,6 +146,28 @@ export const passwordChangeSchema = z.object({
 
 export type PasswordChangeSchemaValues = z.input<typeof passwordChangeSchema>
 
+// ---------- Talleres (plataforma) ----------
+export const tenantSchema = z.object({
+  name: z.string().min(2, 'El nombre del taller es obligatorio'),
+  slug: z
+    .string()
+    .min(2, 'El identificador debe tener al menos 2 caracteres')
+    .max(40, 'El identificador no puede superar 40 caracteres')
+    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Solo minúsculas, dígitos y guiones')
+    .optional()
+    .or(z.literal('')),
+})
+export const tenantUpdateSchema = z.object({
+  name: z.string().min(2, 'El nombre del taller es obligatorio').optional(),
+  slug: z
+    .string()
+    .min(2, 'El identificador debe tener al menos 2 caracteres')
+    .max(40, 'El identificador no puede superar 40 caracteres')
+    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Solo minúsculas, dígitos y guiones')
+    .optional(),
+})
+export type TenantSchemaValues = z.input<typeof tenantSchema>
+
 // ---------- Roles ----------
 export const roleSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),

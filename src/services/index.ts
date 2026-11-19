@@ -35,6 +35,9 @@ import type {
   SystemParameterInput,
   TaxRate,
   TaxRateInput,
+  Tenant,
+  TenantCreated,
+  TenantInput,
   User,
   UserRole,
   UserInput,
@@ -269,6 +272,38 @@ export const updateUser = (id: number, payload: Partial<UserInput>): Promise<Use
   api.put<User>(`/users/${id}`, payload).then((r) => r.data)
 export const deleteUser = (id: number): Promise<void> =>
   api.delete(`/users/${id}`)
+
+// Talleres (módulo de plataforma, ADR-021)
+export const listTenants = (): Promise<Tenant[]> =>
+  api.get<Tenant[]>('/tenants').then((r) => r.data)
+export const createTenant = (payload: TenantInput): Promise<TenantCreated> =>
+  api.post<TenantCreated>('/tenants', payload).then((r) => r.data)
+export const updateTenant = (id: number, payload: Partial<TenantInput>): Promise<Tenant> =>
+  api.patch<Tenant>(`/tenants/${id}`, payload).then((r) => r.data)
+export const suspendTenant = (id: number): Promise<Tenant> =>
+  api.post<Tenant>(`/tenants/${id}/suspend`).then((r) => r.data)
+export const reactivateTenant = (id: number): Promise<Tenant> =>
+  api.post<Tenant>(`/tenants/${id}/reactivate`).then((r) => r.data)
+export const listTenantRoles = (tenantId: number): Promise<Role[]> =>
+  api.get<Role[]>(`/tenants/${tenantId}/roles`).then((r) => r.data)
+export const listTenantUsers = (tenantId: number, includeDeleted = false): Promise<User[]> =>
+  api
+    .get<User[]>(`/tenants/${tenantId}/users`, {
+      params: includeDeleted ? { include_deleted: true } : undefined,
+    })
+    .then((r) => r.data)
+export const createTenantUser = (tenantId: number, payload: UserInput): Promise<User> =>
+  api.post<User>(`/tenants/${tenantId}/users`, payload).then((r) => r.data)
+export const updateTenantUser = (
+  tenantId: number,
+  userId: number,
+  payload: Partial<UserInput>,
+): Promise<User> =>
+  api.put<User>(`/tenants/${tenantId}/users/${userId}`, payload).then((r) => r.data)
+export const deleteTenantUser = (tenantId: number, userId: number): Promise<void> =>
+  api.delete(`/tenants/${tenantId}/users/${userId}`)
+export const restoreTenantUser = (tenantId: number, userId: number): Promise<User> =>
+  api.post<User>(`/tenants/${tenantId}/users/${userId}/restore`).then((r) => r.data)
 
 // Roles
 export const listRoles = (params?: ListParams) =>
